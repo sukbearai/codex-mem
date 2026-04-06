@@ -1,4 +1,4 @@
-# Loom
+# Codex-Mem
 
 > A knowledge vault that works with any LLM agent.
 > Your notes, your git, your data.
@@ -22,8 +22,8 @@ Agent: "You're working on the API redesign. Last session you decided
 ## 30-Second Start
 
 ```bash
-git clone https://github.com/sukbearai/loom.git
-cd loom
+git clone https://github.com/sukbearai/codex-mem.git
+cd codex-mem
 bash plugin/install.sh          # detects your agent, generates config
 cd vault
 claude                          # or: codex

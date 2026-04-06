@@ -1,6 +1,6 @@
 # Adding an Agent Adapter
 
-Loom is agent-agnostic. The `plugin/` directory contains shared hooks and instructions. Each agent needs an **adapter** that wires the hooks into the agent's configuration format.
+Codex-Mem is agent-agnostic. The `plugin/` directory contains shared hooks and instructions. Each agent needs an **adapter** that wires the hooks into the agent's configuration format.
 
 ## What You Need
 
@@ -10,9 +10,9 @@ Loom is agent-agnostic. The `plugin/` directory contains shared hooks and instru
 
 ## Hook Events
 
-Loom uses 3 lifecycle events. Map them to your agent's equivalent:
+Codex-Mem uses 3 lifecycle events. Map them to your agent's equivalent:
 
-| Loom Event | When | Script |
+| Codex-Mem Event | When | Script |
 |-----------|------|--------|
 | SessionStart | Agent starts or resumes | `bash plugin/hooks/session-start.sh` |
 | UserPromptSubmit | User sends a message | `python3 plugin/hooks/classify-message.py` |

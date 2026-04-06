@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eo pipefail
 
-# Loom End-to-End Test Suite
+# Codex-Mem End-to-End Test Suite
 # Simulates a real user: install → session-start → classify → validate → full cycle
 # Run from repo root: bash tests/test_e2e.sh
 
@@ -20,7 +20,7 @@ NC='\033[0m'
 pass() { ((PASS++)); echo -e "  ${GREEN}PASS${NC} $1"; }
 fail() { ((FAIL++)); ERRORS+=("$1: $2"); echo -e "  ${RED}FAIL${NC} $1 — $2"; }
 
-echo "=== Loom E2E Tests ==="
+echo "=== Codex-Mem E2E Tests ==="
 echo "Repo:     $REPO_DIR"
 echo "Test dir: $TEST_DIR"
 echo ""
@@ -144,7 +144,7 @@ else
 fi
 
 # Test WIN signal
-OUT=$(echo '{"prompt":"we shipped the new feature"}' | python3 plugin/hooks/classify-message.py)
+OUT=$(echo '{"prompt":"kudos to the team, great feedback from users"}' | python3 plugin/hooks/classify-message.py)
 if echo "$OUT" | grep -q "WIN"; then
   pass "classify: WIN signal triggers"
 else
@@ -222,7 +222,7 @@ tags:
 
 ## Context
 
-Testing the [[Loom]] vault system.
+Testing the [[Codex-Mem]] vault system.
 
 ## Related
 
@@ -370,6 +370,217 @@ for item in Home.md log.md brain work sources reference templates thinking; do
     fail "README: $item" "not in vault structure section"
   fi
 done
+
+echo ""
+
+# ============================================================
+echo "--- 7. Integrated Mode Install ---"
+# ============================================================
+
+# Simulate a user project with existing config
+INT_DIR=$(mktemp -d)
+cd "$INT_DIR"
+git init -q
+
+# Pre-existing user config
+mkdir -p .claude
+echo '{"permissions":{"allow":["Read","Bash"]}}' > .claude/settings.json
+echo "# My Cool Project" > CLAUDE.md
+echo "Existing instructions here." >> CLAUDE.md
+
+# Run installer from project root
+OUTPUT=$(bash "$REPO_DIR/plugin/install.sh" 2>&1)
+
+# 7a. Detect integrated mode
+if echo "$OUTPUT" | grep -q "Integrated mode"; then
+  pass "integrated: detected integrated mode"
+else
+  fail "integrated: mode detection" "did not detect integrated mode"
+fi
+
+# 7b. Vault template copied
+if [ -f "$INT_DIR/vault/Home.md" ]; then
+  pass "integrated: vault/Home.md created"
+else
+  fail "integrated: vault/Home.md" "not found"
+fi
+
+# 7c. Hooks merged into project root settings.json (not vault/)
+if python3 -c "import json; d=json.load(open('$INT_DIR/.claude/settings.json')); assert 'hooks' in d" 2>/dev/null; then
+  pass "integrated: hooks merged into project root settings.json"
+else
+  fail "integrated: settings.json merge" "hooks key missing"
+fi
+
+# 7d. Existing permissions preserved after merge
+if python3 -c "import json; d=json.load(open('$INT_DIR/.claude/settings.json')); assert 'Read' in d['permissions']['allow']" 2>/dev/null; then
+  pass "integrated: existing permissions preserved"
+else
+  fail "integrated: permissions" "existing config overwritten"
+fi
+
+# 7e. Hook paths use vault/ prefix
+if grep -q "vault/.codex-mem/hooks" "$INT_DIR/.claude/settings.json"; then
+  pass "integrated: hook paths use vault/.codex-mem/hooks/ prefix"
+else
+  fail "integrated: hook paths" "missing vault/ prefix"
+fi
+
+# 7f. CLAUDE.md has both original content and codex-mem section
+if grep -q "My Cool Project" "$INT_DIR/CLAUDE.md" && grep -q "# Codex-Mem" "$INT_DIR/CLAUDE.md"; then
+  pass "integrated: CLAUDE.md has original + codex-mem content"
+else
+  fail "integrated: CLAUDE.md" "content merge failed"
+fi
+
+# 7g. Idempotent re-run — no duplicate sections
+bash "$REPO_DIR/plugin/install.sh" > /dev/null 2>&1
+SECTION_COUNT=$(grep -c "^# Codex-Mem" "$INT_DIR/CLAUDE.md" 2>/dev/null || echo "0")
+if [ "$SECTION_COUNT" -eq 1 ]; then
+  pass "integrated: idempotent — no duplicate codex-mem section"
+else
+  fail "integrated: idempotent" "found $SECTION_COUNT sections"
+fi
+
+HOOK_COUNT=$(python3 -c "
+import json
+d = json.load(open('$INT_DIR/.claude/settings.json'))
+count = sum(len(v) for v in d.get('hooks', {}).values())
+print(count)
+" 2>/dev/null)
+if [ "$HOOK_COUNT" -eq 3 ]; then
+  pass "integrated: idempotent — no duplicate hooks ($HOOK_COUNT entries)"
+else
+  fail "integrated: idempotent hooks" "expected 3 hook entries, got $HOOK_COUNT"
+fi
+
+# 7h. Vault has no agent configs (those live at project root)
+if [ ! -f "$INT_DIR/vault/.claude/settings.json" ] && [ ! -f "$INT_DIR/vault/.codex/hooks.json" ]; then
+  pass "integrated: vault has no agent configs (correct — they live at project root)"
+else
+  fail "integrated: vault agent configs" "should not exist in vault/"
+fi
+
+# 7i. session-start.sh works from project root (finds vault/ subdir)
+SS_OUTPUT=$(CLAUDE_PROJECT_DIR="$INT_DIR" bash "$INT_DIR/vault/.codex-mem/hooks/session-start.sh" 2>&1) || true
+if echo "$SS_OUTPUT" | grep -q "North Star"; then
+  pass "integrated: session-start.sh finds vault/ from project root"
+else
+  fail "integrated: session-start.sh" "cannot find vault from project root"
+fi
+
+rm -rf "$INT_DIR"
+cd "$TEST_DIR"
+
+echo ""
+
+# ============================================================
+echo "--- 8. New Validations ---"
+# ============================================================
+
+# 8a. Placeholder detection
+PLACEHOLDER_NOTE="$TEST_DIR/vault/work/active/Placeholder Test.md"
+cat > "$PLACEHOLDER_NOTE" << 'EOF'
+---
+date: "2026-04-06"
+description: "Testing placeholder detection"
+tags:
+  - test
+---
+
+# {{title}}
+
+Content with [[wikilinks]] but unfilled {{author}} placeholder.
+EOF
+
+OUT=$(echo "{\"tool_input\":{\"file_path\":\"$PLACEHOLDER_NOTE\"}}" | python3 plugin/hooks/validate-write.py)
+if echo "$OUT" | grep -q "Unfilled template placeholders"; then
+  pass "validate: detects unfilled {{placeholders}}"
+else
+  fail "validate: placeholder detection" "not triggered"
+fi
+rm -f "$PLACEHOLDER_NOTE"
+
+# 8b. Log format validation — good entry
+LOG_GOOD="$TEST_DIR/vault/log.md"
+cat > "$LOG_GOOD" << 'EOF'
+---
+description: "Operation log"
+tags:
+  - log
+---
+
+# Operation Log
+
+## [2026-04-06] session | Initial vault setup
+
+- Created vault structure
+EOF
+
+OUT=$(echo "{\"tool_input\":{\"file_path\":\"$LOG_GOOD\"}}" | python3 plugin/hooks/validate-write.py)
+if [ -z "$OUT" ]; then
+  pass "validate: valid log.md passes"
+else
+  fail "validate: valid log.md" "unexpected warnings: $OUT"
+fi
+
+# 8c. Log format validation — bad entry
+LOG_BAD="$TEST_DIR/vault/log.md"
+cat > "$LOG_BAD" << 'EOF'
+---
+description: "Operation log"
+tags:
+  - log
+---
+
+# Operation Log
+
+## session bad format
+## [2026-04-06] session | Good entry
+EOF
+
+OUT=$(echo "{\"tool_input\":{\"file_path\":\"$LOG_BAD\"}}" | python3 plugin/hooks/validate-write.py)
+if echo "$OUT" | grep -q "log entry missing date format"; then
+  pass "validate: detects malformed log entry"
+else
+  fail "validate: log format" "bad format not detected"
+fi
+
+# 8d. Session-end integrity check
+cd "$TEST_DIR/vault"
+mkdir -p work/active
+cat > work/active/Temp.md << 'EOF'
+---
+description: "temp"
+tags: [test]
+---
+# Temp
+We decided to use Redis for caching. [[North Star]]
+EOF
+git add -A && git commit -q -m "add temp note"
+# Now create another note without committing — simulates uncommitted work
+cat > work/active/New.md << 'EOF'
+---
+description: "new"
+tags: [test]
+---
+# New
+Some new content. [[Temp]]
+EOF
+
+OUT=$(echo '{"prompt":"wrap up"}' | python3 "$TEST_DIR/plugin/hooks/classify-message.py")
+if echo "$OUT" | grep -q "SESSION END"; then
+  pass "classify: SESSION END detected on wrap-up"
+else
+  fail "classify: SESSION END" "not triggered"
+fi
+if echo "$OUT" | grep -q "work/Index.md not updated"; then
+  pass "classify: detects missing Index.md update"
+else
+  fail "classify: Index.md check" "gap not detected"
+fi
+
+rm -f work/active/Temp.md work/active/New.md
 
 echo ""
 

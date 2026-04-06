@@ -1,4 +1,4 @@
-# Loom — Core Instructions
+# Codex-Mem — Core Instructions
 
 A structured knowledge vault maintained by an LLM agent. You write notes, maintain links, and keep indexes current. The human curates sources, directs analysis, and asks questions.
 
@@ -104,6 +104,10 @@ When answering a substantial question that synthesizes multiple vault notes:
 3. Link the reference note from related work notes in `## Related`
 4. Add the reference note to `work/Index.md` under `## Reference`
 5. Don't prompt for trivial questions — only for answers that synthesize, compare, or analyze
+
+## Vault Location
+
+The vault may live at the project root or in a `vault/` subdirectory. Use the SessionStart context to determine the actual path. All folder references above (e.g. `brain/`, `work/active/`) are relative to the vault root.
 
 ## Rules
 

@@ -1,16 +1,19 @@
 #!/bin/bash
 set -eo pipefail
 
-# Loom session-start hook
+# Codex-Mem session-start hook
 # Injects vault context into the agent's prompt at session start.
 # Works with any agent that supports SessionStart hooks (Claude Code, Codex CLI).
+#
+# Dynamic context: adapts git log window, reads full North Star,
+# shows all active work, and includes uncommitted changes.
 
 VAULT_DIR="${CLAUDE_PROJECT_DIR:-${CODEX_PROJECT_DIR:-$(pwd)}}"
 cd "$VAULT_DIR"
 
 # Find vault root (look for Home.md or brain/ directory)
 if [ ! -f "Home.md" ] && [ ! -d "brain/" ]; then
-  # Try vault/ subdirectory (repo layout)
+  # Try vault/ subdirectory (integrated layout)
   if [ -d "vault/" ]; then
     VAULT_DIR="$VAULT_DIR/vault"
     cd "$VAULT_DIR"
@@ -23,38 +26,109 @@ echo "### Date"
 echo "$(date +%Y-%m-%d) ($(date +%A))"
 echo ""
 
-# North Star — goals and focus
+# North Star — full file (should be concise by design)
 echo "### North Star"
 if [ -f "brain/North Star.md" ]; then
-  head -30 "brain/North Star.md"
+  cat "brain/North Star.md"
 else
   echo "(No North Star found — create brain/North Star.md to set goals)"
 fi
 echo ""
 
-# Recent changes
-echo "### Recent Changes (last 48h)"
-git log --oneline --since="48 hours ago" --no-merges 2>/dev/null | head -15 || echo "(no git history)"
+# Recent changes — adaptive window
+echo "### Recent Changes"
+COMMITS_48H=$(git log --oneline --since="48 hours ago" --no-merges 2>/dev/null | wc -l | tr -d ' ')
+if [ "$COMMITS_48H" -gt 0 ]; then
+  echo "(last 48 hours)"
+  git log --oneline --since="48 hours ago" --no-merges 2>/dev/null | head -15
+else
+  COMMITS_7D=$(git log --oneline --since="7 days ago" --no-merges 2>/dev/null | wc -l | tr -d ' ')
+  if [ "$COMMITS_7D" -gt 0 ]; then
+    echo "(nothing in 48h — showing last 7 days)"
+    git log --oneline --since="7 days ago" --no-merges 2>/dev/null | head -15
+  else
+    echo "(nothing recent — showing last 5 commits)"
+    git log --oneline -5 --no-merges 2>/dev/null || echo "(no git history)"
+  fi
+fi
 echo ""
 
-# Recent operations from log
+# Recent operations from log — adaptive
 echo "### Recent Operations"
 if [ -f "log.md" ]; then
-  grep "^## \[" "log.md" | tail -5 || true
+  ENTRY_COUNT=$(grep -c "^## \[" "log.md" 2>/dev/null || echo "0")
+  if [ "$ENTRY_COUNT" -gt 0 ]; then
+    # Show last 5 entries with full header line (includes date + type)
+    grep "^## \[" "log.md" | tail -5
+  else
+    echo "(no entries in log.md)"
+  fi
 else
   echo "(no log.md)"
 fi
 echo ""
 
-# Active work
+# Active work — show all (this is the current focus, no truncation)
 echo "### Active Work"
 if [ -d "work/active" ]; then
-  ls work/active/*.md 2>/dev/null | sed 's|work/active/||;s|\.md$||' | head -10 || echo "(none)"
+  WORK_FILES=$(ls work/active/*.md 2>/dev/null || true)
+  if [ -n "$WORK_FILES" ]; then
+    echo "$WORK_FILES" | sed 's|work/active/||;s|\.md$||'
+  else
+    echo "(none)"
+  fi
 else
   echo "(no work/active/ directory)"
 fi
 echo ""
 
-# Vault file listing
+# Uncommitted changes — shows agent what's in-flight
+echo "### Uncommitted Changes"
+CHANGES=$(git status --short -- . 2>/dev/null | head -20)
+if [ -n "$CHANGES" ]; then
+  echo "$CHANGES"
+else
+  echo "(working tree clean)"
+fi
+echo ""
+
+# Recently modified brain files — highlights memory that may need review
+echo "### Recently Modified Brain Files"
+if [ -d "brain" ]; then
+  GIT_DIR=$(git rev-parse --git-dir 2>/dev/null || echo "")
+  if [ -n "$GIT_DIR" ] && [ -f "$GIT_DIR/index" ]; then
+    RECENT_BRAIN=$(find brain/ -name "*.md" -newer "$GIT_DIR/index" 2>/dev/null || true)
+  else
+    RECENT_BRAIN=""
+  fi
+  if [ -n "$RECENT_BRAIN" ]; then
+    echo "$RECENT_BRAIN" | sed 's|brain/||;s|\.md$||'
+  else
+    # Fallback: show brain files modified in last 7 days
+    RECENT_BRAIN=$(find brain/ -name "*.md" -mtime -7 2>/dev/null || true)
+    if [ -n "$RECENT_BRAIN" ]; then
+      echo "(modified in last 7 days)"
+      echo "$RECENT_BRAIN" | sed 's|brain/||;s|\.md$||'
+    else
+      echo "(no recent changes)"
+    fi
+  fi
+fi
+echo ""
+
+# Vault file listing — capped to avoid flooding context in large vaults
 echo "### Vault Files"
-find . -name "*.md" -not -path "./.git/*" -not -path "./.obsidian/*" -not -path "./thinking/*" -not -path "./.claude/*" -not -path "./.codex/*" -not -path "./node_modules/*" 2>/dev/null | sort
+ALL_FILES=$(find . -name "*.md" -not -path "./.git/*" -not -path "./.obsidian/*" -not -path "./thinking/*" -not -path "./.claude/*" -not -path "./.codex/*" -not -path "./node_modules/*" 2>/dev/null | sort)
+FILE_COUNT=$(echo "$ALL_FILES" | grep -c . 2>/dev/null || echo "0")
+
+if [ "$FILE_COUNT" -le 50 ]; then
+  echo "$ALL_FILES"
+else
+  echo "($FILE_COUNT files total — showing summary by folder)"
+  echo "$ALL_FILES" | sed 's|^\./||' | cut -d/ -f1 | sort | uniq -c | sort -rn | while read count dir; do
+    echo "  $dir/ ($count files)"
+  done
+  echo ""
+  echo "Key files:"
+  echo "$ALL_FILES" | grep -E "(Home|Index|North Star|Memories|Key Decisions|Patterns|log)\\.md$" || true
+fi

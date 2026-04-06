@@ -1,8 +1,8 @@
-# How Loom Works
+# How Codex-Mem Works
 
 ## The Core Loop
 
-Loom gives LLM agents persistent memory through a simple loop:
+Codex-Mem gives LLM agents persistent memory through a simple loop:
 
 ```
 Session N: agent reads vault → works with you → writes notes → git commit
@@ -48,13 +48,15 @@ If something's missing, the agent gets a warning and fixes it.
 
 ## The Vault
 
-Six folders, three note types:
+Eight folders, five note types:
 
 - `brain/` — persistent memory (goals, decisions, patterns)
 - `work/active/` — current projects
 - `work/archive/` — completed projects
 - `templates/` — note templates with YAML frontmatter
 - `thinking/` — scratchpad (promote findings, then delete)
+- `sources/` — raw source documents (immutable)
+- `reference/` — saved answers and analyses
 - `Home.md` — entry point
 
 ## Why Markdown + Git
@@ -66,7 +68,7 @@ Six folders, three note types:
 
 ## Why Hooks (Not RAG)
 
-RAG re-derives knowledge from scratch on every query. Loom compiles knowledge once (into structured notes with links) and keeps it current. The agent reads the compiled wiki, not raw chunks.
+RAG re-derives knowledge from scratch on every query. Codex-Mem compiles knowledge once (into structured notes with links) and keeps it current. The agent reads the compiled wiki, not raw chunks.
 
 Hooks are the key mechanism because they're:
 - **Agent-agnostic** — Claude Code and Codex CLI both support the same hook protocol

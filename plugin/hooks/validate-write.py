@@ -6,9 +6,24 @@ Agent-agnostic — outputs hookSpecificOutput compatible with both
 Claude Code and Codex CLI.
 """
 import json
+import re
 import sys
 import os
 from pathlib import Path
+
+
+def _check_log_format(content):
+    """Validate log.md entry format: ## [YYYY-MM-DD] <type> | <title>"""
+    warnings = []
+    for i, line in enumerate(content.splitlines(), 1):
+        if line.startswith("## ") and not line.startswith("## ["):
+            # Heading that looks like a log entry but missing date brackets
+            if any(t in line.lower() for t in ["ingest", "session", "query", "maintenance", "decision", "archive"]):
+                warnings.append(f"Line {i}: log entry missing date format — expected `## [YYYY-MM-DD] <type> | <title>`")
+        elif line.startswith("## ["):
+            if not re.match(r"^## \[\d{4}-\d{2}-\d{2}\] \w+", line):
+                warnings.append(f"Line {i}: malformed log entry — expected `## [YYYY-MM-DD] <type> | <title>`")
+    return warnings
 
 
 def main():
@@ -38,7 +53,7 @@ def main():
     if basename.startswith("README.") and basename.endswith(".md"):
         sys.exit(0)
 
-    skip_paths = [".claude/", ".codex/", ".loom/", ".mind/", "templates/", "thinking/", "node_modules/", "plugin/", "adapters/", "docs/"]
+    skip_paths = [".claude/", ".codex/", ".codex-mem/", ".mind/", "templates/", "thinking/", "node_modules/", "plugin/", "adapters/", "docs/"]
     if any(skip in normalized for skip in skip_paths):
         sys.exit(0)
 
@@ -53,6 +68,8 @@ def main():
             parts = content.split("---", 2)
             if len(parts) >= 3:
                 fm = parts[1]
+                if "date:" not in fm and basename != "log.md":
+                    warnings.append("Missing `date` in frontmatter")
                 if "tags:" not in fm:
                     warnings.append("Missing `tags` in frontmatter")
                 if "description:" not in fm:
@@ -60,6 +77,17 @@ def main():
 
         if len(content) > 300 and "[[" not in content:
             warnings.append("No [[wikilinks]] found — every note should link to at least one other note")
+
+        # Check for unfilled template placeholders
+        placeholders = re.findall(r"\{\{[^}]+\}\}", content)
+        if placeholders:
+            examples = ", ".join(placeholders[:3])
+            warnings.append(f"Unfilled template placeholders found: {examples}")
+
+        # Validate log.md format
+        if basename == "log.md":
+            log_warnings = _check_log_format(content)
+            warnings.extend(log_warnings)
 
     except Exception:
         sys.exit(0)
