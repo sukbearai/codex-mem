@@ -22,14 +22,15 @@ Agent: "You're working on the API redesign. Last session you decided
 ## 30-Second Start
 
 ```bash
-git clone https://github.com/sukbearai/codex-mem.git
-cd codex-mem
-bash plugin/install.sh          # detects your agent, generates config
-cd vault
-claude                          # or: codex
+# From your project directory:
+git clone https://github.com/sukbearai/codex-mem.git /tmp/codex-mem
+bash /tmp/codex-mem/plugin/install.sh   # integrated mode — installs vault + hooks into your project
+claude                                  # or: codex
 ```
 
-Fill in `brain/North Star.md` with your goals, then start talking.
+Fill in `vault/brain/North Star.md` with your goals, then start talking.
+
+> **Standalone mode**: run `install.sh` from inside the codex-mem repo itself to use `vault/` as the working directory.
 
 ## How It Works
 
@@ -62,10 +63,10 @@ Three hooks power the loop:
 
 ## Supported Agents
 
-| Agent | Hooks | Commands | Status |
-|-------|-------|----------|--------|
-| Claude Code | 3 hooks via `.claude/settings.json` | `/standup` `/dump` `/wrap-up` | Full support |
-| Codex CLI | 3 hooks via `.codex/hooks.json` | Natural language (no slash commands) | Full support |
+| Agent | Hooks | Skills | Status |
+|-------|-------|--------|--------|
+| Claude Code | 3 hooks via `.claude/settings.json` | `/dump` `/recall` `/ingest` `/wrap-up` | Full support |
+| Codex CLI | 3 hooks via `.codex/hooks.json` | `$dump` `$recall` `$ingest` `$wrap-up` | Full support |
 | Other | Write an adapter ([docs/adding-an-agent.md](docs/adding-an-agent.md)) | Depends on agent | Community |
 
 ## Vault Structure
@@ -104,7 +105,11 @@ User-invoked skills — the agent suggests them, but only executes when you expl
 
 The classify hook detects intent (decision, win, project update, query, ingest) and suggests the right skill. You decide whether to run it — the agent never auto-writes vault notes.
 
-Codex CLI users: say "start session", "capture this: ...", or "wrap up" in natural language. The hooks handle the rest.
+Claude Code uses `/skill-name`, Codex CLI uses `$skill-name`. Both read from their respective `.claude/skills/` and `.codex/skills/` directories.
+
+## Usage Scenarios
+
+See [docs/usage.md](docs/usage.md) — 7 real scenarios from first session to project completion, with exact commands and expected output.
 
 ## Design Principles
 
