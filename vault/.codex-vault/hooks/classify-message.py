@@ -17,6 +17,7 @@ SIGNALS = [
     {
         "name": "DECISION",
         "message": "DECISION detected — suggest the user run /dump to capture this decision",
+        "auto_message": "DECISION detected — execute /dump now to capture this decision from the user's message",
         "patterns": [
             "decided", "deciding", "decision", "we chose", "agreed to",
             "let's go with", "the call is", "we're going with",
@@ -25,6 +26,7 @@ SIGNALS = [
     {
         "name": "WIN",
         "message": "WIN detected — suggest the user run /dump to record this achievement",
+        "auto_message": "WIN detected — execute /dump now to record this achievement from the user's message",
         "patterns": [
             "achieved", "won", "praised",
             "kudos", "shoutout", "great feedback", "recognized",
@@ -33,6 +35,7 @@ SIGNALS = [
     {
         "name": "PROJECT UPDATE",
         "message": "PROJECT UPDATE detected — suggest the user run /dump to log this progress",
+        "auto_message": "PROJECT UPDATE detected — execute /dump now to log this progress from the user's message",
         "patterns": [
             "project update", "sprint", "milestone",
             "shipped", "shipping", "launched", "launching",
@@ -44,6 +47,7 @@ SIGNALS = [
     {
         "name": "QUERY",
         "message": "QUERY detected — suggest the user run /recall to check existing knowledge first",
+        "auto_message": "QUERY detected — execute /recall now to search vault for relevant information before answering",
         "patterns": [
             "what is", "how does", "why did", "compare", "analyze",
             "explain the", "what's the difference", "summarize the",
@@ -53,6 +57,7 @@ SIGNALS = [
     {
         "name": "INGEST",
         "message": "INGEST detected — suggest the user run /ingest to process the source",
+        "auto_message": "INGEST detected — execute /ingest now to process the source from the user's message",
         "patterns": [
             "ingest", "process this", "read this article",
             "summarize this", "new source", "clip this", "web clip",
@@ -88,6 +93,23 @@ def _find_vault_root():
     ):
         return vault_sub
     return None
+
+
+def _read_mode():
+    """Read classify mode from vault config. Default: suggest."""
+    vault_root = _find_vault_root()
+    if not vault_root:
+        return "suggest"
+    config_path = os.path.join(vault_root, ".codex-vault", "config.json")
+    try:
+        with open(config_path) as f:
+            config = json.load(f)
+        mode = config.get("classify_mode", "suggest")
+        if mode in ("suggest", "auto"):
+            return mode
+    except (OSError, ValueError, KeyError):
+        pass
+    return "suggest"
 
 
 def _get_changed_files(vault_root):
@@ -172,9 +194,10 @@ def _check_vault_integrity(vault_root):
     return warnings
 
 
-def classify(prompt):
+def classify(prompt, mode="suggest"):
     p = prompt.lower()
-    return [s["message"] for s in SIGNALS if _match(s["patterns"], p)]
+    key = "auto_message" if mode == "auto" else "message"
+    return [s[key] for s in SIGNALS if _match(s["patterns"], p)]
 
 
 def is_session_end(prompt):
@@ -192,39 +215,63 @@ def main():
     if not isinstance(prompt, str) or not prompt:
         sys.exit(0)
 
-    messages = []
+    signal_messages = []
+    session_end_messages = []
 
     try:
-        # Regular signal classification
-        signals = classify(prompt)
-        messages.extend(signals)
+        mode = _read_mode()
 
-        # Session-end check
+        # Regular signal classification
+        signals = classify(prompt, mode)
+        signal_messages.extend(signals)
+
+        # Session-end check (always suggest mode — never auto-execute wrap-up)
         if is_session_end(prompt):
             vault_root = _find_vault_root()
             if vault_root:
                 integrity_warnings = _check_vault_integrity(vault_root)
                 if integrity_warnings:
-                    messages.append(
+                    session_end_messages.append(
                         "SESSION END — vault integrity check found issues:\n"
                         + "\n".join(f"  - {w}" for w in integrity_warnings)
                         + "\nFix these before wrapping up."
                     )
                 else:
-                    messages.append("SESSION END — vault integrity check passed.")
+                    session_end_messages.append("SESSION END — vault integrity check passed.")
     except Exception:
         sys.exit(0)
 
-    if messages:
-        hints = "\n".join(f"- {s}" for s in messages)
+    parts = []
+
+    if signal_messages:
+        hints = "\n".join(f"- {s}" for s in signal_messages)
+        if mode == "auto":
+            parts.append(
+                "Auto-execute the following skills based on user intent:\n"
+                + hints
+                + "\n\nExecute the skill immediately with the user's message as input. Do not ask for confirmation."
+            )
+        else:
+            parts.append(
+                "Skill suggestions (do NOT auto-execute — suggest the skill to the user and let them decide):\n"
+                + hints
+                + "\n\nWait for the user to invoke the skill. Do not create vault notes without explicit user action."
+            )
+
+    if session_end_messages:
+        hints = "\n".join(f"- {s}" for s in session_end_messages)
+        parts.append(
+            "Skill suggestions (do NOT auto-execute — suggest the skill to the user and let them decide):\n"
+            + hints
+            + "\n\nWait for the user to invoke the skill. Do not create vault notes without explicit user action."
+        )
+
+    if parts:
+        context = "\n\n".join(parts)
         output = {
             "hookSpecificOutput": {
                 "hookEventName": "UserPromptSubmit",
-                "additionalContext": (
-                    "Skill suggestions (do NOT auto-execute — suggest the skill to the user and let them decide):\n"
-                    + hints
-                    + "\n\nWait for the user to invoke the skill. Do not create vault notes without explicit user action."
-                )
+                "additionalContext": context
             }
         }
         json.dump(output, sys.stdout)
