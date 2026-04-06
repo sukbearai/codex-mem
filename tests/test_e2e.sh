@@ -30,7 +30,7 @@ echo "--- 1. Install ---"
 # ============================================================
 
 # Copy repo to test dir (simulate git clone)
-cp -r "$REPO_DIR"/{plugin,adapters,vault,docs,README.md,LICENSE,.gitignore} "$TEST_DIR/"
+cp -r "$REPO_DIR"/{plugin,vault,docs,README.md,LICENSE,.gitignore} "$TEST_DIR/"
 cd "$TEST_DIR"
 git init -q && git add -A && git commit -q -m "init"
 
@@ -51,6 +51,18 @@ if command -v codex &>/dev/null; then
   else
     fail "Codex CLI hooks.json" "file not found"
   fi
+  # Check Codex skills installed
+  if [ -f "vault/.codex/skills/dump/SKILL.md" ]; then
+    pass "Codex CLI skills installed"
+  else
+    fail "Codex CLI skills" "not found in vault/.codex/skills/"
+  fi
+  # Check hooks feature flag enabled
+  if [ -f "vault/.codex/config.toml" ] && grep -q "codex_hooks = true" "vault/.codex/config.toml"; then
+    pass "Codex CLI hooks feature flag enabled"
+  else
+    fail "Codex CLI config.toml" "hooks feature flag not set"
+  fi
 else
   echo -e "  ${YELLOW}SKIP${NC} Codex CLI hooks.json (codex not installed)"
 fi
@@ -69,11 +81,11 @@ else
 fi
 
 # Check commands copied
-for cmd in standup dump wrap-up ingest; do
-  if [ -f "vault/.claude/commands/$cmd.md" ]; then
-    pass "Command /$cmd installed"
+for cmd in dump wrap-up ingest recall; do
+  if [ -f "vault/.claude/skills/$cmd/SKILL.md" ]; then
+    pass "Skill /$cmd installed"
   else
-    fail "Command /$cmd" "not found in vault/.claude/commands/"
+    fail "Skill /$cmd" "not found in vault/.claude/skills/$cmd/SKILL.md"
   fi
 done
 
@@ -173,6 +185,19 @@ if echo "$OUT" | grep -q "INGEST"; then
   pass "classify: INGEST signal triggers"
 else
   fail "classify: INGEST" "signal not triggered"
+fi
+
+# Test hints suggest skills, not auto-execution
+OUT=$(echo '{"prompt":"we decided to use PostgreSQL"}' | python3 plugin/hooks/classify-message.py)
+if echo "$OUT" | grep -q "suggest the user run /dump"; then
+  pass "classify: DECISION hint points to /dump skill"
+else
+  fail "classify: DECISION skill hint" "expected '/dump' skill suggestion"
+fi
+if echo "$OUT" | grep -q "do NOT auto-execute"; then
+  pass "classify: hints include no-auto-execute guard"
+else
+  fail "classify: no-auto-execute guard" "missing guard in output"
 fi
 
 # Test no false positive on normal message
@@ -581,6 +606,64 @@ else
 fi
 
 rm -f work/active/Temp.md work/active/New.md
+
+echo ""
+
+# ============================================================
+echo "--- 9. Session-Start Tiered Vault Listing ---"
+# ============================================================
+
+cd "$TEST_DIR/vault"
+export CLAUDE_PROJECT_DIR="$TEST_DIR/vault"
+
+# Current vault has ~15 files — should be Tier 1 (list all)
+T1_OUTPUT=$(bash "$TEST_DIR/plugin/hooks/session-start.sh" 2>&1)
+if echo "$T1_OUTPUT" | grep -q "./Home.md" && ! echo "$T1_OUTPUT" | grep -q "showing summary"; then
+  pass "tier1: small vault lists all files"
+else
+  fail "tier1: small vault" "expected full listing without summary"
+fi
+
+# Tier 2: push past 20 files with sources
+mkdir -p sources
+for i in $(seq 1 15); do
+  echo "---" > "sources/src-$i.md"
+done
+git add -A && git commit -q -m "add sources for tier2 test"
+
+T2_OUTPUT=$(bash "$TEST_DIR/plugin/hooks/session-start.sh" 2>&1)
+if echo "$T2_OUTPUT" | grep -q "/recall"; then
+  pass "tier2: medium vault mentions /recall for cold storage"
+else
+  fail "tier2: medium vault" "/recall hint not found"
+fi
+if echo "$T2_OUTPUT" | grep -q "./brain/North Star.md"; then
+  pass "tier2: hot folders still listed"
+else
+  fail "tier2: hot folders" "brain files not listed"
+fi
+
+# Tier 3: push past 50 files
+for i in $(seq 16 50); do
+  echo "---" > "sources/src-$i.md"
+done
+git add -A && git commit -q -m "add sources for tier3 test"
+
+T3_OUTPUT=$(bash "$TEST_DIR/plugin/hooks/session-start.sh" 2>&1)
+if echo "$T3_OUTPUT" | grep -q "showing summary"; then
+  pass "tier3: large vault shows folder summary"
+else
+  fail "tier3: large vault" "folder summary not found"
+fi
+if echo "$T3_OUTPUT" | grep -q "Recently modified"; then
+  pass "tier3: shows recently modified files"
+else
+  fail "tier3: recently modified" "section not found"
+fi
+
+# Cleanup tier test files
+rm -f sources/src-*.md
+git add -A && git commit -q -m "cleanup tier test files"
 
 echo ""
 

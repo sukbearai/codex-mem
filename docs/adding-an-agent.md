@@ -45,12 +45,11 @@ Empty stdout or exit code 0 with no output = no hints to inject.
 
 Say you want to add support for `myagent`:
 
-1. Create `adapters/myagent/`
+1. The shared hooks live in `plugin/hooks/`, skills in `plugin/skills/`
 2. Create the hooks config file in whatever format `myagent` expects
 3. Point each hook to the shared scripts in `plugin/hooks/`
-4. Generate the instructions file from `plugin/instructions.md`
-5. Update `plugin/install.sh` to detect `myagent` and run setup
-6. Submit a PR
+4. Add a `setup_myagent` function in `plugin/install.sh` that installs hooks, skills, and instructions
+5. Submit a PR
 
 ## Testing
 

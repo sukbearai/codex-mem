@@ -16,7 +16,7 @@ from pathlib import Path
 SIGNALS = [
     {
         "name": "DECISION",
-        "message": "DECISION detected — consider creating a Decision Record in work/active/ and logging in work/Index.md",
+        "message": "DECISION detected — suggest the user run /dump to capture this decision",
         "patterns": [
             "decided", "deciding", "decision", "we chose", "agreed to",
             "let's go with", "the call is", "we're going with",
@@ -24,7 +24,7 @@ SIGNALS = [
     },
     {
         "name": "WIN",
-        "message": "WIN detected — consider noting this achievement and linking from the work note",
+        "message": "WIN detected — suggest the user run /dump to record this achievement",
         "patterns": [
             "achieved", "won", "praised",
             "kudos", "shoutout", "great feedback", "recognized",
@@ -32,7 +32,7 @@ SIGNALS = [
     },
     {
         "name": "PROJECT UPDATE",
-        "message": "PROJECT UPDATE detected — consider updating the active work note in work/active/",
+        "message": "PROJECT UPDATE detected — suggest the user run /dump to log this progress",
         "patterns": [
             "project update", "sprint", "milestone",
             "shipped", "shipping", "launched", "launching",
@@ -43,7 +43,7 @@ SIGNALS = [
     },
     {
         "name": "QUERY",
-        "message": "QUERY detected — if the answer is substantial, consider offering to save it as a reference note in reference/",
+        "message": "QUERY detected — suggest the user run /recall to check existing knowledge first",
         "patterns": [
             "what is", "how does", "why did", "compare", "analyze",
             "explain the", "what's the difference", "summarize the",
@@ -52,7 +52,7 @@ SIGNALS = [
     },
     {
         "name": "INGEST",
-        "message": "INGEST detected — consider using /ingest to process the source into a wiki page",
+        "message": "INGEST detected — suggest the user run /ingest to process the source",
         "patterns": [
             "ingest", "process this", "read this article",
             "summarize this", "new source", "clip this", "web clip",
@@ -221,9 +221,9 @@ def main():
             "hookSpecificOutput": {
                 "hookEventName": "UserPromptSubmit",
                 "additionalContext": (
-                    "Content classification hints:\n"
+                    "Skill suggestions (do NOT auto-execute — suggest the skill to the user and let them decide):\n"
                     + hints
-                    + "\n\nUse proper templates, add [[wikilinks]], follow vault conventions."
+                    + "\n\nWait for the user to invoke the skill. Do not create vault notes without explicit user action."
                 )
             }
         }

@@ -91,14 +91,18 @@ vault/
 
 Eight folders. Five note types. That's it.
 
-## Commands (Claude Code)
+## Skills
 
-| Command | What It Does |
-|---------|-------------|
-| `/standup` | Morning kickoff — loads context, reviews yesterday, suggests priorities |
-| `/dump` | Freeform capture — say anything, agent routes it to the right notes |
+User-invoked skills — the agent suggests them, but only executes when you explicitly run one:
+
+| Skill | What It Does |
+|-------|-------------|
+| `/dump` | Freeform capture — say anything, agent classifies and routes to the right notes |
 | `/wrap-up` | End-of-session review — verify notes, update indexes, check links |
 | `/ingest` | Process a source document into wiki pages with cross-links |
+| `/recall` | On-demand memory retrieval — search the vault for a topic and synthesize |
+
+The classify hook detects intent (decision, win, project update, query, ingest) and suggests the right skill. You decide whether to run it — the agent never auto-writes vault notes.
 
 Codex CLI users: say "start session", "capture this: ...", or "wrap up" in natural language. The hooks handle the rest.
 
@@ -117,7 +121,7 @@ Codex CLI users: say "start session", "capture this: ...", or "wrap up" in natur
 | Your goals | Edit `brain/North Star.md` |
 | New note types | Add templates to `templates/`, update `plugin/instructions.md` |
 | More signals | Add patterns to `plugin/hooks/classify-message.py` |
-| New agent | Create an adapter in `adapters/` ([guide](docs/adding-an-agent.md)) |
+| New agent | Add hooks and skills in `plugin/` ([guide](docs/adding-an-agent.md)) |
 
 ## Requirements
 

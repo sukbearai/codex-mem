@@ -24,9 +24,9 @@ The SessionStart hook injects: North Star goals, recent git changes, active work
 
 ### Work
 
-1. Classify what the user says (the hook helps with hints)
-2. Search before creating — check if a related note exists
-3. Create or update the right note with proper frontmatter and wikilinks
+1. The classify hook detects intent and suggests skills — **do not auto-execute**. Suggest the skill to the user and let them decide.
+2. Available skills: `/dump`, `/recall`, `/ingest`, `/wrap-up`
+3. Search before creating — check if a related note exists (use `/recall <topic>` for targeted vault search)
 4. Update `work/Index.md` if a new note was created
 
 ### End

@@ -116,19 +116,61 @@ if [ -d "brain" ]; then
 fi
 echo ""
 
-# Vault file listing — capped to avoid flooding context in large vaults
+# Vault file listing — tiered to avoid flooding context in large vaults
 echo "### Vault Files"
-ALL_FILES=$(find . -name "*.md" -not -path "./.git/*" -not -path "./.obsidian/*" -not -path "./thinking/*" -not -path "./.claude/*" -not -path "./.codex/*" -not -path "./node_modules/*" 2>/dev/null | sort)
+ALL_FILES=$(find . -name "*.md" -not -path "./.git/*" -not -path "./.obsidian/*" -not -path "./thinking/*" -not -path "./.claude/*" -not -path "./.codex/*" -not -path "./.codex-mem/*" -not -path "./node_modules/*" 2>/dev/null | sort)
 FILE_COUNT=$(echo "$ALL_FILES" | grep -c . 2>/dev/null || echo "0")
 
-if [ "$FILE_COUNT" -le 50 ]; then
-  echo "$ALL_FILES"
-else
-  echo "($FILE_COUNT files total — showing summary by folder)"
+_folder_summary() {
   echo "$ALL_FILES" | sed 's|^\./||' | cut -d/ -f1 | sort | uniq -c | sort -rn | while read count dir; do
     echo "  $dir/ ($count files)"
   done
+}
+
+_key_files() {
+  echo "$ALL_FILES" | grep -E "(Home|Index|North Star|Memories|Key Decisions|Patterns|log)\\.md$" || true
+}
+
+if [ "$FILE_COUNT" -le 20 ]; then
+  # Tier 1: small vault — list everything
+  echo "$ALL_FILES"
+
+elif [ "$FILE_COUNT" -le 50 ]; then
+  # Tier 2: medium vault — list hot folders, summarize cold storage
+  HOT_FILES=$(echo "$ALL_FILES" | grep -v -E "^\./sources/|^\./work/archive/" || true)
+  COLD_COUNT=$(echo "$ALL_FILES" | grep -E "^\./sources/|^\./work/archive/" | grep -c . 2>/dev/null || echo "0")
+
+  if [ -n "$HOT_FILES" ]; then
+    echo "$HOT_FILES"
+  fi
+  if [ "$COLD_COUNT" -gt 0 ]; then
+    echo ""
+    echo "(+ $COLD_COUNT files in sources/ and work/archive/ — use /recall to search)"
+  fi
+
+elif [ "$FILE_COUNT" -le 150 ]; then
+  # Tier 3: large vault — folder summary + recent + key files
+  echo "($FILE_COUNT files — showing summary)"
+  echo ""
+  _folder_summary
+  echo ""
+  echo "Recently modified (7 days):"
+  find . -name "*.md" -mtime -7 -not -path "./.git/*" -not -path "./.obsidian/*" -not -path "./thinking/*" -not -path "./.claude/*" -not -path "./.codex/*" -not -path "./.codex-mem/*" -not -path "./node_modules/*" 2>/dev/null | sort || echo "  (none)"
   echo ""
   echo "Key files:"
-  echo "$ALL_FILES" | grep -E "(Home|Index|North Star|Memories|Key Decisions|Patterns|log)\\.md$" || true
+  _key_files
+
+else
+  # Tier 4: very large vault — minimal footprint
+  echo "($FILE_COUNT files — showing summary)"
+  echo ""
+  _folder_summary
+  echo ""
+  echo "Recently modified (3 days):"
+  find . -name "*.md" -mtime -3 -not -path "./.git/*" -not -path "./.obsidian/*" -not -path "./thinking/*" -not -path "./.claude/*" -not -path "./.codex/*" -not -path "./.codex-mem/*" -not -path "./node_modules/*" 2>/dev/null | sort || echo "  (none)"
+  echo ""
+  echo "Key files:"
+  _key_files
+  echo ""
+  echo "Use /recall <topic> to search the vault."
 fi
