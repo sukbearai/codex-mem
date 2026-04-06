@@ -1,6 +1,6 @@
 # Adding an Agent Adapter
 
-Codex-Mem is agent-agnostic. The `plugin/` directory contains shared hooks and instructions. Each agent needs an **adapter** that wires the hooks into the agent's configuration format.
+Codex-Vault is agent-agnostic. The `plugin/` directory contains shared hooks and instructions. Each agent needs an **adapter** that wires the hooks into the agent's configuration format.
 
 ## What You Need
 
@@ -10,9 +10,9 @@ Codex-Mem is agent-agnostic. The `plugin/` directory contains shared hooks and i
 
 ## Hook Events
 
-Codex-Mem uses 3 lifecycle events. Map them to your agent's equivalent:
+Codex-Vault uses 3 lifecycle events. Map them to your agent's equivalent:
 
-| Codex-Mem Event | When | Script |
+| Codex-Vault Event | When | Script |
 |-----------|------|--------|
 | SessionStart | Agent starts or resumes | `bash plugin/hooks/session-start.sh` |
 | UserPromptSubmit | User sends a message | `python3 plugin/hooks/classify-message.py` |

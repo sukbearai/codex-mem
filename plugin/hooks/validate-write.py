@@ -53,7 +53,7 @@ def main():
     if basename.startswith("README.") and basename.endswith(".md"):
         sys.exit(0)
 
-    skip_paths = [".claude/", ".codex/", ".codex-mem/", ".mind/", "templates/", "thinking/", "node_modules/", "plugin/", "docs/"]
+    skip_paths = [".claude/", ".codex/", ".codex-vault/", ".mind/", "templates/", "thinking/", "node_modules/", "plugin/", "docs/"]
     if any(skip in normalized for skip in skip_paths):
         sys.exit(0)
 

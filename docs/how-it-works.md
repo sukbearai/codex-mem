@@ -1,8 +1,8 @@
-# How Codex-Mem Works
+# How Codex-Vault Works
 
 ## The Core Loop
 
-Codex-Mem gives LLM agents persistent memory through a simple loop:
+Codex-Vault gives LLM agents persistent memory through a simple loop:
 
 ```
 Session N: agent reads vault → works with you → writes notes → git commit
@@ -68,7 +68,7 @@ Eight folders, five note types:
 
 ## Why Hooks (Not RAG)
 
-RAG re-derives knowledge from scratch on every query. Codex-Mem compiles knowledge once (into structured notes with links) and keeps it current. The agent reads the compiled wiki, not raw chunks.
+RAG re-derives knowledge from scratch on every query. Codex-Vault compiles knowledge once (into structured notes with links) and keeps it current. The agent reads the compiled wiki, not raw chunks.
 
 Hooks are the key mechanism because they're:
 - **Agent-agnostic** — Claude Code and Codex CLI both support the same hook protocol

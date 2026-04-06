@@ -1,4 +1,4 @@
-# Codex-Mem — Core Instructions
+# Codex-Vault — Core Instructions
 
 A structured knowledge vault maintained by an LLM agent. You write notes, maintain links, and keep indexes current. The human curates sources, directs analysis, and asks questions.
 

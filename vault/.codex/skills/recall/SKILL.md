@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: sukbearai
   version: "1.0.0"
-  homepage: "https://github.com/sukbearai/codex-mem"
+  homepage: "https://github.com/sukbearai/codex-vault"
 ---
 
 Search the vault for information about the given topic.

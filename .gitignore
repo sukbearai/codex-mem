@@ -14,8 +14,8 @@ vault/.claude/*
 vault/.codex/*
 !vault/.codex/hooks.json
 !vault/.codex/skills/
-vault/.codex-mem/*
-!vault/.codex-mem/hooks/
+vault/.codex-vault/*
+!vault/.codex-vault/hooks/
 
 # Thinking / scratchpad
 vault/thinking/session-logs/

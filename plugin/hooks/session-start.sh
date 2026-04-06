@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eo pipefail
 
-# Codex-Mem session-start hook
+# Codex-Vault session-start hook
 # Injects vault context into the agent's prompt at session start.
 # Works with any agent that supports SessionStart hooks (Claude Code, Codex CLI).
 #
@@ -118,7 +118,7 @@ echo ""
 
 # Vault file listing — tiered to avoid flooding context in large vaults
 echo "### Vault Files"
-ALL_FILES=$(find . -name "*.md" -not -path "./.git/*" -not -path "./.obsidian/*" -not -path "./thinking/*" -not -path "./.claude/*" -not -path "./.codex/*" -not -path "./.codex-mem/*" -not -path "./node_modules/*" 2>/dev/null | sort)
+ALL_FILES=$(find . -name "*.md" -not -path "./.git/*" -not -path "./.obsidian/*" -not -path "./thinking/*" -not -path "./.claude/*" -not -path "./.codex/*" -not -path "./.codex-vault/*" -not -path "./node_modules/*" 2>/dev/null | sort)
 FILE_COUNT=$(echo "$ALL_FILES" | grep -c . 2>/dev/null || echo "0")
 
 _folder_summary() {
@@ -155,7 +155,7 @@ elif [ "$FILE_COUNT" -le 150 ]; then
   _folder_summary
   echo ""
   echo "Recently modified (7 days):"
-  find . -name "*.md" -mtime -7 -not -path "./.git/*" -not -path "./.obsidian/*" -not -path "./thinking/*" -not -path "./.claude/*" -not -path "./.codex/*" -not -path "./.codex-mem/*" -not -path "./node_modules/*" 2>/dev/null | sort || echo "  (none)"
+  find . -name "*.md" -mtime -7 -not -path "./.git/*" -not -path "./.obsidian/*" -not -path "./thinking/*" -not -path "./.claude/*" -not -path "./.codex/*" -not -path "./.codex-vault/*" -not -path "./node_modules/*" 2>/dev/null | sort || echo "  (none)"
   echo ""
   echo "Key files:"
   _key_files
@@ -167,7 +167,7 @@ else
   _folder_summary
   echo ""
   echo "Recently modified (3 days):"
-  find . -name "*.md" -mtime -3 -not -path "./.git/*" -not -path "./.obsidian/*" -not -path "./thinking/*" -not -path "./.claude/*" -not -path "./.codex/*" -not -path "./.codex-mem/*" -not -path "./node_modules/*" 2>/dev/null | sort || echo "  (none)"
+  find . -name "*.md" -mtime -3 -not -path "./.git/*" -not -path "./.obsidian/*" -not -path "./thinking/*" -not -path "./.claude/*" -not -path "./.codex/*" -not -path "./.codex-vault/*" -not -path "./node_modules/*" 2>/dev/null | sort || echo "  (none)"
   echo ""
   echo "Key files:"
   _key_files

@@ -1,6 +1,6 @@
 # Usage Guide
 
-Real scenarios showing how to use codex-mem in daily work. Each scenario shows exactly what you type and what happens.
+Real scenarios showing how to use codex-vault in daily work. Each scenario shows exactly what you type and what happens.
 
 > Examples use Claude Code (`/skill`). Codex CLI users: replace `/skill` with `$skill`.
 

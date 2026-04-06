@@ -1,7 +1,7 @@
 #!/bin/bash
 set -eo pipefail
 
-# Codex-Mem End-to-End Test Suite
+# Codex-Vault End-to-End Test Suite
 # Simulates a real user: install → session-start → classify → validate → full cycle
 # Run from repo root: bash tests/test_e2e.sh
 
@@ -20,7 +20,7 @@ NC='\033[0m'
 pass() { ((PASS++)); echo -e "  ${GREEN}PASS${NC} $1"; }
 fail() { ((FAIL++)); ERRORS+=("$1: $2"); echo -e "  ${RED}FAIL${NC} $1 — $2"; }
 
-echo "=== Codex-Mem E2E Tests ==="
+echo "=== Codex-Vault E2E Tests ==="
 echo "Repo:     $REPO_DIR"
 echo "Test dir: $TEST_DIR"
 echo ""
@@ -247,7 +247,7 @@ tags:
 
 ## Context
 
-Testing the [[Codex-Mem]] vault system.
+Testing the [[Codex-Vault]] vault system.
 
 ## Related
 
@@ -445,24 +445,24 @@ else
 fi
 
 # 7e. Hook paths use vault/ prefix
-if grep -q "vault/.codex-mem/hooks" "$INT_DIR/.claude/settings.json"; then
-  pass "integrated: hook paths use vault/.codex-mem/hooks/ prefix"
+if grep -q "vault/.codex-vault/hooks" "$INT_DIR/.claude/settings.json"; then
+  pass "integrated: hook paths use vault/.codex-vault/hooks/ prefix"
 else
   fail "integrated: hook paths" "missing vault/ prefix"
 fi
 
-# 7f. CLAUDE.md has both original content and codex-mem section
-if grep -q "My Cool Project" "$INT_DIR/CLAUDE.md" && grep -q "# Codex-Mem" "$INT_DIR/CLAUDE.md"; then
-  pass "integrated: CLAUDE.md has original + codex-mem content"
+# 7f. CLAUDE.md has both original content and codex-vault section
+if grep -q "My Cool Project" "$INT_DIR/CLAUDE.md" && grep -q "# Codex-Vault" "$INT_DIR/CLAUDE.md"; then
+  pass "integrated: CLAUDE.md has original + codex-vault content"
 else
   fail "integrated: CLAUDE.md" "content merge failed"
 fi
 
 # 7g. Idempotent re-run — no duplicate sections
 bash "$REPO_DIR/plugin/install.sh" > /dev/null 2>&1
-SECTION_COUNT=$(grep -c "^# Codex-Mem" "$INT_DIR/CLAUDE.md" 2>/dev/null || echo "0")
+SECTION_COUNT=$(grep -c "^# Codex-Vault" "$INT_DIR/CLAUDE.md" 2>/dev/null || echo "0")
 if [ "$SECTION_COUNT" -eq 1 ]; then
-  pass "integrated: idempotent — no duplicate codex-mem section"
+  pass "integrated: idempotent — no duplicate codex-vault section"
 else
   fail "integrated: idempotent" "found $SECTION_COUNT sections"
 fi
@@ -487,7 +487,7 @@ else
 fi
 
 # 7i. session-start.sh works from project root (finds vault/ subdir)
-SS_OUTPUT=$(CLAUDE_PROJECT_DIR="$INT_DIR" bash "$INT_DIR/vault/.codex-mem/hooks/session-start.sh" 2>&1) || true
+SS_OUTPUT=$(CLAUDE_PROJECT_DIR="$INT_DIR" bash "$INT_DIR/vault/.codex-vault/hooks/session-start.sh" 2>&1) || true
 if echo "$SS_OUTPUT" | grep -q "North Star"; then
   pass "integrated: session-start.sh finds vault/ from project root"
 else

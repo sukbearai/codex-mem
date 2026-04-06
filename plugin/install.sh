@@ -1,23 +1,23 @@
 #!/bin/bash
 set -eo pipefail
 
-# Codex-Mem installer
+# Codex-Vault installer
 # Detects installed LLM agents and generates the appropriate configuration.
 # Supports: Claude Code, Codex CLI.
 #
 # Two modes:
-#   Standalone — run from within the codex-mem repo (vault/ is the working directory)
+#   Standalone — run from within the codex-vault repo (vault/ is the working directory)
 #   Integrated — run from a user's project root (vault/ becomes a subdirectory)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PROJECT_DIR="$(pwd)"
 
-echo "=== Codex-Mem Installer ==="
+echo "=== Codex-Vault Installer ==="
 echo ""
 
 # --- Detect mode ---
-# If CWD is the codex-mem repo (or vault/), use standalone mode.
+# If CWD is the codex-vault repo (or vault/), use standalone mode.
 # Otherwise, use integrated mode (install into user's project).
 
 MODE="integrated"
@@ -32,12 +32,12 @@ esac
 if [ "$MODE" = "standalone" ]; then
   VAULT_DIR="$REPO_DIR/vault"
   CONFIG_DIR="$VAULT_DIR"            # configs go inside vault/
-  HOOKS_REL=".codex-mem/hooks"       # relative to vault/
+  HOOKS_REL=".codex-vault/hooks"       # relative to vault/
   echo "[*] Standalone mode — vault is the working directory"
 else
   VAULT_DIR="$PROJECT_DIR/vault"
   CONFIG_DIR="$PROJECT_DIR"          # configs go at project root
-  HOOKS_REL="vault/.codex-mem/hooks" # relative to project root
+  HOOKS_REL="vault/.codex-vault/hooks" # relative to project root
   echo "[*] Integrated mode — installing into $(basename "$PROJECT_DIR")/"
 fi
 
@@ -89,11 +89,11 @@ fi
 
 # --- Copy hooks into vault (makes vault self-contained) ---
 
-HOOKS_DIR="$VAULT_DIR/.codex-mem/hooks"
+HOOKS_DIR="$VAULT_DIR/.codex-vault/hooks"
 mkdir -p "$HOOKS_DIR"
 cp "$REPO_DIR/plugin/hooks/"* "$HOOKS_DIR/"
 chmod +x "$HOOKS_DIR/"*.sh "$HOOKS_DIR/"*.py 2>/dev/null || true
-echo "[+] Hook scripts copied to vault/.codex-mem/hooks/"
+echo "[+] Hook scripts copied to vault/.codex-vault/hooks/"
 echo ""
 
 # --- Helper: merge hooks into existing settings.json ---
@@ -104,11 +104,11 @@ merge_hooks_json() {
   local hooks_rel="$2"
 
   # Pass data via env vars to python3 — no shell interpolation in python code.
-  CMEM_TARGET_FILE="$target_file" CMEM_HOOKS_REL="$hooks_rel" python3 <<'PYEOF'
+  CVAULT_TARGET_FILE="$target_file" CVAULT_HOOKS_REL="$hooks_rel" python3 <<'PYEOF'
 import json, os
 
-target_file = os.environ["CMEM_TARGET_FILE"]
-hooks_rel = os.environ["CMEM_HOOKS_REL"]
+target_file = os.environ["CVAULT_TARGET_FILE"]
+hooks_rel = os.environ["CVAULT_HOOKS_REL"]
 
 new_hooks = {
     "SessionStart": [{
@@ -153,19 +153,19 @@ with open(target_file, "w") as f:
 PYEOF
 }
 
-# --- Helper: append codex-mem section to instruction file ---
+# --- Helper: append codex-vault section to instruction file ---
 
 append_instructions() {
   local target_file="$1"
 
   # Generate instructions: heading + blank line + body (skip first 2 lines of instructions.md)
   local section_content
-  section_content="$(printf '# Codex-Mem\n\n'; tail -n +3 "$REPO_DIR/plugin/instructions.md")"
+  section_content="$(printf '# Codex-Vault\n\n'; tail -n +3 "$REPO_DIR/plugin/instructions.md")"
 
   if [ -f "$target_file" ]; then
     # Check if section already exists
-    if grep -q "^# Codex-Mem" "$target_file"; then
-      echo "    (codex-mem section already present — skipping)"
+    if grep -q "^# Codex-Vault" "$target_file"; then
+      echo "    (codex-vault section already present — skipping)"
       return
     fi
     # Append with separator
@@ -213,7 +213,7 @@ setup_claude() {
 
     # Append instructions to project root CLAUDE.md
     append_instructions "$CONFIG_DIR/CLAUDE.md"
-    echo "  [+] CLAUDE.md (codex-mem section appended at project root)"
+    echo "  [+] CLAUDE.md (codex-vault section appended at project root)"
 
     # Install skills into project root .claude/skills/
     install_skills "$CONFIG_DIR" ".claude"
@@ -278,7 +278,7 @@ setup_codex() {
       echo "  [+] AGENTS.md (references @CLAUDE.md)"
     else
       append_instructions "$CONFIG_DIR/AGENTS.md"
-      echo "  [+] AGENTS.md (codex-mem section appended at project root)"
+      echo "  [+] AGENTS.md (codex-vault section appended at project root)"
     fi
 
     # Enable hooks feature flag
