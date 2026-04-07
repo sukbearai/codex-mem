@@ -362,12 +362,30 @@ def main():
 
     context = _build_context(vault_dir)
 
-    # hookSpecificOutput + additionalContext → injected into LLM context
+    # Build a short summary for user-facing display
+    goal = _north_star_goal(vault_dir)
+    active_dir = os.path.join(vault_dir, "work", "active")
+    work_count = len([f for f in os.listdir(active_dir) if f.endswith(".md")]) if os.path.isdir(active_dir) else 0
+    changes = _git_status_short(vault_dir)
+    all_files = _find_md_files(vault_dir)
+
+    summary_parts = ["[Vault]"]
+    branch = _run_git(["rev-parse", "--abbrev-ref", "HEAD"], vault_dir)
+    if branch:
+        summary_parts.append(branch[0])
+    if goal:
+        summary_parts.append(f"goal: {goal}")
+    summary_parts.append(f"active:{work_count}")
+    summary_parts.append(f"changes:{len(changes)}")
+    summary_parts.append(f"{len(all_files)} notes")
+    summary = " | ".join(summary_parts)
+
     output = {
         "hookSpecificOutput": {
             "hookEventName": "SessionStart",
             "additionalContext": context
-        }
+        },
+        "systemMessage": summary
     }
     sys.stdout.write(json.dumps(output) + "\n")
     sys.stdout.flush()
