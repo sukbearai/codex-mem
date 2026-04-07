@@ -166,22 +166,26 @@ function cmdUninstall() {
   const cwd = process.cwd();
   const versionFile = path.join(cwd, 'vault', '.codex-vault', 'version');
 
-  // 1. Check installation
-  if (!fs.existsSync(versionFile)) {
+  // 1. Check installation (also check legacy .codex-mem path)
+  const legacyVersionFile = path.join(cwd, 'vault', '.codex-mem', 'version');
+  if (!fs.existsSync(versionFile) && !fs.existsSync(legacyVersionFile)) {
     console.error('codex-vault is not installed in this directory.');
     console.error('Nothing to uninstall.');
     process.exit(1);
   }
 
-  const installedVersion = fs.readFileSync(versionFile, 'utf8').trim();
+  const activeVersionFile = fs.existsSync(versionFile) ? versionFile : legacyVersionFile;
+  const installedVersion = fs.readFileSync(activeVersionFile, 'utf8').trim();
   console.log(`Uninstalling codex-vault v${installedVersion}...`);
   console.log('NOTE: vault/ data (brain/, work/, sources/) is preserved.\n');
 
-  // 2. Remove vault/.codex-vault/ (hooks + version + backups)
-  const codexVaultDir = path.join(cwd, 'vault', '.codex-vault');
-  if (fs.existsSync(codexVaultDir)) {
-    fs.rmSync(codexVaultDir, { recursive: true, force: true });
-    console.log('  [x] Removed vault/.codex-vault/');
+  // 2. Remove vault/.codex-vault/ and legacy vault/.codex-mem/ (hooks + version + backups)
+  for (const dirName of ['.codex-vault', '.codex-mem']) {
+    const dir = path.join(cwd, 'vault', dirName);
+    if (fs.existsSync(dir)) {
+      fs.rmSync(dir, { recursive: true, force: true });
+      console.log(`  [x] Removed vault/${dirName}/`);
+    }
   }
 
   // 3. Clean .claude/settings.json
@@ -239,7 +243,8 @@ function cleanHooksJson(filePath, label) {
       const hooks = entry.hooks || [];
       // Keep the entry only if none of its hook commands belong to codex-vault
       const isVaultEntry = hooks.some(
-        (h) => typeof h.command === 'string' && h.command.includes('codex-vault/hooks/')
+        (h) => typeof h.command === 'string' &&
+          (h.command.includes('codex-vault/hooks/') || h.command.includes('codex-mem/hooks/'))
       );
       return !isVaultEntry;
     });
