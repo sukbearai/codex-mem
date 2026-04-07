@@ -205,8 +205,7 @@ function cmdUninstall() {
   // 7. Clean CLAUDE.md
   cleanInstructionFile(path.join(cwd, 'CLAUDE.md'), 'CLAUDE.md');
 
-  // 8. Clean AGENTS.md
-  cleanAgentsMd(cwd);
+  // 8. AGENTS.md — leave untouched (may contain user's own agent instructions)
 
   // Summary
   console.log('\ncodex-vault has been uninstalled.');
@@ -397,26 +396,6 @@ function cleanInstructionFile(filePath, label) {
   }
 }
 
-/**
- * Handle AGENTS.md: if it's just "@CLAUDE.md", delete it.
- * Otherwise apply the same section-removal logic as CLAUDE.md.
- */
-function cleanAgentsMd(cwd) {
-  const filePath = path.join(cwd, 'AGENTS.md');
-  if (!fs.existsSync(filePath)) return;
-
-  const content = fs.readFileSync(filePath, 'utf8');
-
-  // If content is just @CLAUDE.md (possibly with whitespace), delete the file
-  if (content.trim() === '@CLAUDE.md') {
-    fs.unlinkSync(filePath);
-    console.log('  [x] Removed AGENTS.md (@CLAUDE.md reference)');
-    return;
-  }
-
-  // Otherwise, apply the same section-removal logic
-  cleanInstructionFile(filePath, 'AGENTS.md');
-}
 
 /**
  * Check if a directory is empty.
