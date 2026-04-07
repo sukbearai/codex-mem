@@ -20,6 +20,38 @@ if [ ! -f "Home.md" ] && [ ! -d "brain/" ]; then
   fi
 fi
 
+# --- Visible banner (stderr → user terminal) ---
+{
+  echo ""
+  echo "  ╭─────────────────────────────────────╮"
+  echo "  │  📚 Codex-Vault · Session Context   │"
+  echo "  ├─────────────────────────────────────┤"
+
+  # North Star preview — extract first non-empty bullet under "## Current Focus"
+  if [ -f "brain/North Star.md" ]; then
+    GOAL=$(sed -n '/^## Current Focus/,/^## /{/^- ./{s/^- //;p;q;};}' "brain/North Star.md" | cut -c1-40)
+    [ -n "$GOAL" ] && echo "  │  🎯 $GOAL" || echo "  │  🎯 (set goals in North Star.md)"
+  else
+    echo "  │  🎯 (create brain/North Star.md)"
+  fi
+
+  # Active work count
+  WORK_COUNT=$(find work/active -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+  echo "  │  📋 $WORK_COUNT active project(s)"
+
+  # Uncommitted changes count
+  CHANGE_COUNT=$(git status --short -- . 2>/dev/null | wc -l | tr -d ' ')
+  if [ "$CHANGE_COUNT" -gt 0 ]; then
+    echo "  │  ✏️  $CHANGE_COUNT uncommitted change(s)"
+  else
+    echo "  │  ✅ working tree clean"
+  fi
+
+  echo "  ╰─────────────────────────────────────╯"
+  echo ""
+} >&2
+
+# --- Full context (stdout → agent) ---
 echo "## Session Context"
 echo ""
 echo "### Date"

@@ -20,6 +20,38 @@ if [ ! -f "Home.md" ] && [ ! -d "brain/" ]; then
   fi
 fi
 
+# --- Visible banner (stderr → user terminal) ---
+{
+  echo ""
+  echo "  ╭─────────────────────────────────────╮"
+  echo "  │  📚 Codex-Vault · Session Context   │"
+  echo "  ├─────────────────────────────────────┤"
+
+  # North Star preview — extract first non-empty bullet under "## Current Focus"
+  if [ -f "brain/North Star.md" ]; then
+    GOAL=$(sed -n '/^## Current Focus/,/^## /{/^- ./{s/^- //;p;q;};}' "brain/North Star.md" | cut -c1-40)
+    [ -n "$GOAL" ] && echo "  │  🎯 $GOAL" || echo "  │  🎯 (set goals in North Star.md)"
+  else
+    echo "  │  🎯 (create brain/North Star.md)"
+  fi
+
+  # Active work count
+  WORK_COUNT=$(find work/active -name "*.md" 2>/dev/null | wc -l | tr -d ' ')
+  echo "  │  📋 $WORK_COUNT active project(s)"
+
+  # Uncommitted changes count
+  CHANGE_COUNT=$(git status --short -- . 2>/dev/null | wc -l | tr -d ' ')
+  if [ "$CHANGE_COUNT" -gt 0 ]; then
+    echo "  │  ✏️  $CHANGE_COUNT uncommitted change(s)"
+  else
+    echo "  │  ✅ working tree clean"
+  fi
+
+  echo "  ╰─────────────────────────────────────╯"
+  echo ""
+} >&2
+
+# --- Full context (stdout → agent) ---
 echo "## Session Context"
 echo ""
 echo "### Date"
@@ -40,12 +72,12 @@ echo "### Recent Changes"
 COMMITS_48H=$(git log --oneline --since="48 hours ago" --no-merges 2>/dev/null | wc -l | tr -d ' ')
 if [ "$COMMITS_48H" -gt 0 ]; then
   echo "(last 48 hours)"
-  git log --oneline --since="48 hours ago" --no-merges 2>/dev/null | head -15
+  git log --oneline --since="48 hours ago" --no-merges 2>/dev/null | head -15 || true
 else
   COMMITS_7D=$(git log --oneline --since="7 days ago" --no-merges 2>/dev/null | wc -l | tr -d ' ')
   if [ "$COMMITS_7D" -gt 0 ]; then
     echo "(nothing in 48h — showing last 7 days)"
-    git log --oneline --since="7 days ago" --no-merges 2>/dev/null | head -15
+    git log --oneline --since="7 days ago" --no-merges 2>/dev/null | head -15 || true
   else
     echo "(nothing recent — showing last 5 commits)"
     git log --oneline -5 --no-merges 2>/dev/null || echo "(no git history)"
@@ -84,7 +116,7 @@ echo ""
 
 # Uncommitted changes — shows agent what's in-flight
 echo "### Uncommitted Changes"
-CHANGES=$(git status --short -- . 2>/dev/null | head -20)
+CHANGES=$(git status --short -- . 2>/dev/null | head -20 || true)
 if [ -n "$CHANGES" ]; then
   echo "$CHANGES"
 else
