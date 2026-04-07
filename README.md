@@ -113,7 +113,7 @@ User-invoked skills — the agent suggests them, but only executes when you expl
 | `/ingest` | Process a source document into wiki pages with cross-links |
 | `/recall` | On-demand memory retrieval — search the vault for a topic and synthesize |
 
-The classify hook detects intent (decision, win, project update, query, ingest) and suggests the right skill. You decide whether to run it — the agent never auto-writes vault notes.
+The classify hook detects intent (decision, win, project update, query, ingest) and suggests the right skill. By default, you decide whether to run it (**suggest mode**). Set `{"classify_mode": "auto"}` in `vault/.codex-vault/config.json` to have the agent execute skills automatically (**auto mode**).
 
 Claude Code uses `/skill-name`, Codex CLI uses `$skill-name`. Both read from their respective `.claude/skills/` and `.codex/skills/` directories.
 
@@ -163,12 +163,22 @@ See [docs/usage.md](docs/usage.md) — 7 real scenarios from first session to pr
 | Your goals | Edit `brain/North Star.md` |
 | New note types | Add templates to `templates/`, update `plugin/instructions.md` |
 | More signals | Add patterns to `plugin/hooks/classify-message.py` |
+| Auto-execute skills | Set `{"classify_mode": "auto"}` in `vault/.codex-vault/config.json` |
 | New agent | Add hooks and skills in `plugin/` ([guide](docs/adding-an-agent.md)) |
+
+## CLI
+
+```bash
+npx @suwujs/codex-vault init        # Install vault + hooks into current project
+npx @suwujs/codex-vault upgrade     # Upgrade hooks and skills (preserves vault data)
+npx @suwujs/codex-vault uninstall   # Remove hooks and skills (preserves vault data)
+```
 
 ## Requirements
 
 - Git
 - Python 3
+- Node.js >= 18 (for CLI)
 - One of: [Claude Code](https://docs.anthropic.com/en/docs/claude-code), [Codex CLI](https://github.com/openai/codex)
 - Optional: [Obsidian](https://obsidian.md) (for graph view, backlinks, visual browsing)
 

@@ -34,7 +34,16 @@ Runs on every user message. Scans for keywords and injects routing hints:
 - "Shipped the feature" → hint: note the win
 - "Sprint update" → hint: update the active work note
 
-The agent is free to ignore hints. They're nudges, not commands.
+**Two modes** (configured via `vault/.codex-vault/config.json`):
+
+- **suggest** (default) — the agent suggests skills, you decide whether to run them
+- **auto** — the agent executes skills immediately on intent detection
+
+Session-end detection always stays in suggest mode for safety.
+
+```json
+{"classify_mode": "auto"}
+```
 
 ### 3. validate-write.py
 
@@ -65,6 +74,18 @@ Eight folders, five note types:
 - **Auditable** — `git log` shows exactly what changed and when
 - **Durable** — survives agent changes, service shutdowns, API deprecations
 - **Composable** — Obsidian for visual browsing, grep for search, git for history
+
+## CLI
+
+Install, upgrade, and uninstall via npm:
+
+```bash
+npx @suwujs/codex-vault init        # Install
+npx @suwujs/codex-vault upgrade     # Upgrade hooks/skills (preserves data)
+npx @suwujs/codex-vault uninstall   # Remove hooks/skills (preserves data)
+```
+
+The CLI is a thin wrapper around `plugin/install.sh`. It adds version tracking (`vault/.codex-vault/version`), backup on upgrade, and precise cleanup on uninstall.
 
 ## Why Hooks (Not RAG)
 

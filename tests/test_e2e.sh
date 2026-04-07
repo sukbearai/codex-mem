@@ -668,6 +668,160 @@ git add -A && git commit -q -m "cleanup tier test files"
 echo ""
 
 # ============================================================
+echo "--- 10. CLI Commands (bin/cli.js) ---"
+# ============================================================
+
+CLI="$REPO_DIR/bin/cli.js"
+
+# 10a. --version
+CLI_VER=$(node "$CLI" --version 2>&1)
+if [ -n "$CLI_VER" ] && echo "$CLI_VER" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+'; then
+  pass "cli: --version outputs semver ($CLI_VER)"
+else
+  fail "cli: --version" "unexpected output: $CLI_VER"
+fi
+
+# 10b. --help
+CLI_HELP=$(node "$CLI" --help 2>&1)
+if echo "$CLI_HELP" | grep -q "init" && echo "$CLI_HELP" | grep -q "upgrade" && echo "$CLI_HELP" | grep -q "uninstall"; then
+  pass "cli: --help lists all commands"
+else
+  fail "cli: --help" "missing commands in help output"
+fi
+
+# 10c. unknown command
+if ! node "$CLI" bogus-cmd >/dev/null 2>&1; then
+  pass "cli: unknown command exits non-zero"
+else
+  fail "cli: unknown command" "expected non-zero exit"
+fi
+
+# 10d. init in a fresh directory
+CLI_DIR=$(mktemp -d)
+cd "$CLI_DIR"
+git init -q
+CLI_OUT=$(node "$CLI" init 2>&1)
+if echo "$CLI_OUT" | grep -q "installed successfully" && [ -f "$CLI_DIR/vault/.codex-vault/version" ]; then
+  pass "cli: init creates vault and writes version file"
+else
+  fail "cli: init" "install failed or version file missing"
+fi
+
+# 10e. init again (already installed)
+CLI_OUT=$(node "$CLI" init 2>&1)
+if echo "$CLI_OUT" | grep -q "already installed"; then
+  pass "cli: init detects existing installation"
+else
+  fail "cli: init re-run" "did not detect existing install"
+fi
+
+# 10f. upgrade at same version
+CLI_OUT=$(node "$CLI" upgrade 2>&1)
+if echo "$CLI_OUT" | grep -q "Already at"; then
+  pass "cli: upgrade at same version says 'Already at'"
+else
+  fail "cli: upgrade same version" "unexpected output: $CLI_OUT"
+fi
+
+# 10g. uninstall
+CLI_OUT=$(node "$CLI" uninstall 2>&1)
+if echo "$CLI_OUT" | grep -q "has been uninstalled" && [ ! -d "$CLI_DIR/vault/.codex-vault" ]; then
+  pass "cli: uninstall removes .codex-vault/"
+else
+  fail "cli: uninstall" "cleanup incomplete"
+fi
+
+# 10h. uninstall preserves vault data
+if [ -f "$CLI_DIR/vault/Home.md" ] && [ -d "$CLI_DIR/vault/brain" ]; then
+  pass "cli: uninstall preserves vault data"
+else
+  fail "cli: uninstall data" "vault data was deleted"
+fi
+
+# 10i. uninstall again (already uninstalled)
+if ! node "$CLI" uninstall >/dev/null 2>&1; then
+  pass "cli: uninstall when not installed exits non-zero"
+else
+  fail "cli: uninstall re-run" "expected non-zero exit"
+fi
+
+# 10j. init detects legacy codex-mem
+mkdir -p "$CLI_DIR/vault/.codex-mem"
+echo "0.0.1" > "$CLI_DIR/vault/.codex-mem/version"
+CLI_OUT=$(node "$CLI" init 2>&1)
+if echo "$CLI_OUT" | grep -q "Legacy codex-mem"; then
+  pass "cli: init detects legacy codex-mem"
+else
+  fail "cli: init legacy" "did not detect codex-mem"
+fi
+
+# 10k. upgrade detects legacy codex-mem
+if ! node "$CLI" upgrade >/dev/null 2>&1; then
+  pass "cli: upgrade rejects legacy codex-mem"
+else
+  fail "cli: upgrade legacy" "should have rejected"
+fi
+
+# 10l. uninstall cleans legacy codex-mem
+CLI_OUT=$(node "$CLI" uninstall 2>&1)
+if echo "$CLI_OUT" | grep -q ".codex-mem" && [ ! -d "$CLI_DIR/vault/.codex-mem" ]; then
+  pass "cli: uninstall removes legacy .codex-mem/"
+else
+  fail "cli: uninstall legacy" ".codex-mem not removed"
+fi
+
+rm -rf "$CLI_DIR"
+cd "$TEST_DIR"
+
+echo ""
+
+# ============================================================
+echo "--- 11. Classify Dual Mode ---"
+# ============================================================
+
+cd "$TEST_DIR/vault"
+
+# 11a. Default mode (no config) = suggest
+OUT=$(echo '{"prompt":"we decided to use Redis"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/classify-message.py")
+if echo "$OUT" | grep -q "do NOT auto-execute"; then
+  pass "dual-mode: default is suggest mode"
+else
+  fail "dual-mode: default" "not in suggest mode"
+fi
+
+# 11b. Auto mode with config
+mkdir -p "$TEST_DIR/vault/.codex-vault"
+echo '{"classify_mode":"auto"}' > "$TEST_DIR/vault/.codex-vault/config.json"
+OUT=$(echo '{"prompt":"we decided to use Redis"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/classify-message.py")
+if echo "$OUT" | grep -q "Auto-execute"; then
+  pass "dual-mode: auto mode activates with config"
+else
+  fail "dual-mode: auto mode" "not activated"
+fi
+
+# 11c. Auto mode — session end stays suggest
+OUT=$(echo '{"prompt":"wrap up"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/classify-message.py")
+if echo "$OUT" | grep -q "SESSION END" && echo "$OUT" | grep -q "do NOT auto-execute\|suggest"; then
+  pass "dual-mode: session end stays suggest in auto mode"
+else
+  fail "dual-mode: session end" "should stay suggest"
+fi
+
+# 11d. Invalid mode in config falls back to suggest
+echo '{"classify_mode":"turbo"}' > "$TEST_DIR/vault/.codex-vault/config.json"
+OUT=$(echo '{"prompt":"we decided to use Redis"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/classify-message.py")
+if echo "$OUT" | grep -q "do NOT auto-execute"; then
+  pass "dual-mode: invalid mode falls back to suggest"
+else
+  fail "dual-mode: invalid mode" "did not fall back"
+fi
+
+rm -rf "$TEST_DIR/vault/.codex-vault"
+cd "$TEST_DIR"
+
+echo ""
+
+# ============================================================
 # Summary
 # ============================================================
 

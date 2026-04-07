@@ -146,10 +146,25 @@ vault/
 4. **图优先** — 目录按用途分组，`[[wikilinks]]` 按语义分组。链接是主要的组织工具。
 5. **面向未来** — 即使模型有了内建记忆，vault 仍然有价值：可审计、可迁移、git 追踪的本地存储。
 
+## CLI
+
+```bash
+npx @suwujs/codex-vault init        # 安装 vault + hooks 到当前项目
+npx @suwujs/codex-vault upgrade     # 升级 hooks 和 skills（保留 vault 数据）
+npx @suwujs/codex-vault uninstall   # 移除 hooks 和 skills（保留 vault 数据）
+```
+
+## 配置
+
+| 配置项 | 文件 | 说明 |
+|--------|------|------|
+| 自动执行 skills | `vault/.codex-vault/config.json` | `{"classify_mode": "auto"}` — 检测到意图后自动执行对应 skill，而非建议 |
+
 ## 依赖
 
 - Git
 - Python 3
+- Node.js >= 18（CLI 安装用）
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 或 [Codex CLI](https://github.com/openai/codex)（二选一）
 - 可选：[Obsidian](https://obsidian.md)（图谱视图、反向链接、可视化浏览）
 
