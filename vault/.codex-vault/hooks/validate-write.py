@@ -105,7 +105,11 @@ def main():
 
         # Visible feedback to user terminal (stderr)
         count = len(warnings)
-        print(f"  ⚠️  vault: {count} warning(s) in {basename}", file=sys.stderr)
+        first = warnings[0]
+        if count == 1:
+            print(f"  ⚠️  vault: {basename} — {first}", file=sys.stderr)
+        else:
+            print(f"  ⚠️  vault: {basename} — {first} (+{count - 1} more)", file=sys.stderr)
 
     sys.exit(0)
 

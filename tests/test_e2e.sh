@@ -836,6 +836,13 @@ else
   fail "stderr: session-start banner" "banner not found in stderr"
 fi
 
+# 12a2. session-start shows project count
+if echo "$SS_ERR" | grep -q "active project"; then
+  pass "stderr: session-start shows project count"
+else
+  fail "stderr: session-start project count" "not found"
+fi
+
 # 12b. session-start banner shows goal hint when North Star is template
 if echo "$SS_ERR" | grep -q "set goals"; then
   pass "stderr: session-start shows 'set goals' hint"
@@ -843,10 +850,10 @@ else
   fail "stderr: session-start goal hint" "expected 'set goals' for template North Star"
 fi
 
-# 12c. classify stderr — DECISION signal
+# 12c. classify stderr — DECISION signal with skill hint
 CL_ERR=$(echo '{"prompt":"we decided to use Redis"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/classify-message.py" 2>&1 1>/dev/null)
-if echo "$CL_ERR" | grep -q "DECISION detected"; then
-  pass "stderr: classify shows DECISION detected"
+if echo "$CL_ERR" | grep -q "DECISION" && echo "$CL_ERR" | grep -q "/dump"; then
+  pass "stderr: classify shows DECISION → /dump"
 else
   fail "stderr: classify DECISION" "feedback not in stderr"
 fi
@@ -877,23 +884,29 @@ else
 fi
 rm -rf "$TEST_DIR/vault/.codex-vault"
 
-# 12g. classify stderr — SESSION END
+# 12g. classify stderr — SESSION END with skill hint
 CL_ERR_END=$(echo '{"prompt":"wrap up"}' | CLAUDE_PROJECT_DIR="$TEST_DIR/vault" python3 "$TEST_DIR/plugin/hooks/classify-message.py" 2>&1 1>/dev/null)
-if echo "$CL_ERR_END" | grep -q "SESSION END detected"; then
-  pass "stderr: classify shows SESSION END detected"
+if echo "$CL_ERR_END" | grep -q "SESSION END" && echo "$CL_ERR_END" | grep -q "/wrap-up"; then
+  pass "stderr: classify shows SESSION END → /wrap-up"
 else
   fail "stderr: classify SESSION END" "feedback not in stderr"
 fi
 
-# 12h. validate stderr — warnings shown
+# 12h. validate stderr — shows first warning detail
 BAD_NOTE="$TEST_DIR/vault/work/active/Stderr Test.md"
 mkdir -p "$TEST_DIR/vault/work/active"
-echo "No frontmatter, no wikilinks, long enough to trigger checks. Padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding." > "$BAD_NOTE"
+echo "No frontmatter, no wikilinks, long enough to trigger checks. Padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding padding." > "$BAD_NOTE"
 VW_ERR=$(echo "{\"tool_input\":{\"file_path\":\"$BAD_NOTE\"}}" | python3 "$TEST_DIR/plugin/hooks/validate-write.py" 2>&1 1>/dev/null)
-if echo "$VW_ERR" | grep -q "warning(s)"; then
-  pass "stderr: validate shows warning count"
+if echo "$VW_ERR" | grep -q "Missing YAML frontmatter"; then
+  pass "stderr: validate shows first warning detail"
 else
-  fail "stderr: validate warnings" "feedback not in stderr"
+  fail "stderr: validate warnings" "first warning not in stderr"
+fi
+# 12h2. validate stderr — shows "+N more" for multiple warnings
+if echo "$VW_ERR" | grep -q "+.*more"; then
+  pass "stderr: validate shows +N more for multiple warnings"
+else
+  fail "stderr: validate +N more" "not shown for multi-warning"
 fi
 rm -f "$BAD_NOTE"
 

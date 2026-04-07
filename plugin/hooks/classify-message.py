@@ -16,6 +16,7 @@ from pathlib import Path
 SIGNALS = [
     {
         "name": "DECISION",
+        "skill": "/dump",
         "message": "DECISION detected — suggest the user run /dump to capture this decision",
         "auto_message": "DECISION detected — execute /dump now to capture this decision from the user's message",
         "patterns": [
@@ -25,6 +26,7 @@ SIGNALS = [
     },
     {
         "name": "WIN",
+        "skill": "/dump",
         "message": "WIN detected — suggest the user run /dump to record this achievement",
         "auto_message": "WIN detected — execute /dump now to record this achievement from the user's message",
         "patterns": [
@@ -34,6 +36,7 @@ SIGNALS = [
     },
     {
         "name": "PROJECT UPDATE",
+        "skill": "/dump",
         "message": "PROJECT UPDATE detected — suggest the user run /dump to log this progress",
         "auto_message": "PROJECT UPDATE detected — execute /dump now to log this progress from the user's message",
         "patterns": [
@@ -46,6 +49,7 @@ SIGNALS = [
     },
     {
         "name": "QUERY",
+        "skill": "/recall",
         "message": "QUERY detected — suggest the user run /recall to check existing knowledge first",
         "auto_message": "QUERY detected — execute /recall now to search vault for relevant information before answering",
         "patterns": [
@@ -56,6 +60,7 @@ SIGNALS = [
     },
     {
         "name": "INGEST",
+        "skill": "/ingest",
         "message": "INGEST detected — suggest the user run /ingest to process the source",
         "auto_message": "INGEST detected — execute /ingest now to process the source from the user's message",
         "patterns": [
@@ -278,13 +283,16 @@ def main():
         sys.stdout.flush()
 
         # Visible feedback to user terminal (stderr)
-        names = [s["name"] for s in SIGNALS if _match(s["patterns"], prompt.lower())]
+        matched = [s for s in SIGNALS if _match(s["patterns"], prompt.lower())]
+        parts = []
+        for s in matched:
+            parts.append(f"{s['name']} → {s['skill']}")
         if is_session_end(prompt):
-            names.append("SESSION END")
-        if names:
-            label = " + ".join(names)
+            parts.append("SESSION END → /wrap-up")
+        if parts:
+            label = ", ".join(parts)
             icon = "🔄" if mode == "auto" else "💡"
-            print(f"  {icon} vault: {label} detected", file=sys.stderr)
+            print(f"  {icon} vault: {label}", file=sys.stderr)
 
     sys.exit(0)
 
