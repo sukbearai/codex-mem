@@ -269,7 +269,6 @@ function cleanHooksJson(filePath, label) {
   if (Object.keys(data).length === 0) {
     fs.unlinkSync(filePath);
     console.log(`  [x] Removed ${label} (empty after cleanup)`);
-    cleanEmptyParents(path.dirname(filePath));
   } else {
     fs.writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n');
     console.log(`  [x] Cleaned codex-vault hooks from ${label}`);
@@ -302,7 +301,6 @@ function cleanCodexConfigToml(cwd) {
   if (content.trim() === '') {
     fs.unlinkSync(filePath);
     console.log('  [x] Removed .codex/config.toml (empty after cleanup)');
-    cleanEmptyParents(path.dirname(filePath));
   } else {
     fs.writeFileSync(filePath, content);
     console.log('  [x] Cleaned codex_hooks from .codex/config.toml');
@@ -329,12 +327,9 @@ function removeSkills(agentDir, label, skillNames) {
 
   console.log(`  [x] Removed ${removed} skills from ${label}/skills/`);
 
-  // Clean up empty directories
+  // Clean up empty skills/ directory only — never delete the agent dir itself
   if (isDirEmpty(skillsDir)) {
     fs.rmdirSync(skillsDir);
-    if (isDirEmpty(agentDir)) {
-      fs.rmdirSync(agentDir);
-    }
   }
 }
 
@@ -409,13 +404,3 @@ function isDirEmpty(dirPath) {
   }
 }
 
-/**
- * Remove empty parent directories up to (but not including) cwd.
- */
-function cleanEmptyParents(dirPath) {
-  const cwd = process.cwd();
-  if (dirPath === cwd || !dirPath.startsWith(cwd)) return;
-  if (isDirEmpty(dirPath)) {
-    fs.rmdirSync(dirPath);
-  }
-}
