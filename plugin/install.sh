@@ -35,9 +35,9 @@ if [ "$MODE" = "standalone" ]; then
   HOOKS_REL=".codex-vault/hooks"       # relative to vault/
   echo "[*] Standalone mode — vault is the working directory"
 else
-  VAULT_DIR="$PROJECT_DIR/vault"
+  VAULT_DIR="$PROJECT_DIR/.vault"
   CONFIG_DIR="$PROJECT_DIR"          # configs go at project root
-  HOOKS_REL="vault/.codex-vault/hooks" # relative to project root
+  HOOKS_REL=".vault/.codex-vault/hooks" # relative to project root
   echo "[*] Integrated mode — installing into $(basename "$PROJECT_DIR")/"
 fi
 
@@ -72,7 +72,7 @@ echo ""
 
 if [ "$MODE" = "integrated" ]; then
   if [ -d "$VAULT_DIR" ] && [ -f "$VAULT_DIR/Home.md" ]; then
-    echo "[*] Vault already exists at vault/ — skipping template copy"
+    echo "[*] Vault already exists at .vault/ — skipping template copy"
   else
     echo "[+] Creating vault from template..."
     mkdir -p "$VAULT_DIR"
@@ -82,7 +82,20 @@ if [ "$MODE" = "integrated" ]; then
     cp -r "$REPO_DIR/vault/".* "$VAULT_DIR/" 2>/dev/null || true
     # Remove agent configs — we generate fresh ones for the target layout
     rm -rf "$VAULT_DIR/.claude" "$VAULT_DIR/.codex" "$VAULT_DIR/CLAUDE.md" "$VAULT_DIR/AGENTS.md" 2>/dev/null || true
-    echo "    Copied template to vault/"
+    echo "    Copied template to .vault/"
+  fi
+  echo ""
+
+  # Add .vault to .gitignore if not already present
+  GITIGNORE="$PROJECT_DIR/.gitignore"
+  if [ -f "$GITIGNORE" ]; then
+    if ! grep -q "^\.vault/" "$GITIGNORE" && ! grep -q "^\.vault$" "$GITIGNORE"; then
+      printf '\n# Codex-Vault — local knowledge base (per-user, not shared)\n.vault/\n' >> "$GITIGNORE"
+      echo "[+] Added .vault/ to .gitignore"
+    fi
+  else
+    printf '# Codex-Vault — local knowledge base (per-user, not shared)\n.vault/\n' > "$GITIGNORE"
+    echo "[+] Created .gitignore with .vault/"
   fi
   echo ""
 fi
@@ -94,7 +107,11 @@ mkdir -p "$HOOKS_DIR/claude" "$HOOKS_DIR/codex"
 cp "$REPO_DIR/plugin/hooks/claude/"* "$HOOKS_DIR/claude/"
 cp "$REPO_DIR/plugin/hooks/codex/"* "$HOOKS_DIR/codex/"
 chmod +x "$HOOKS_DIR/claude/"*.py "$HOOKS_DIR/codex/"*.py 2>/dev/null || true
-echo "[+] Hook scripts copied to vault/.codex-vault/hooks/{claude,codex}/"
+if [ "$MODE" = "standalone" ]; then
+  echo "[+] Hook scripts copied to vault/.codex-vault/hooks/{claude,codex}/"
+else
+  echo "[+] Hook scripts copied to .vault/.codex-vault/hooks/{claude,codex}/"
+fi
 echo ""
 
 # --- Helper: merge hooks into existing settings.json (Claude Code) ---
@@ -278,6 +295,7 @@ setup_claude() {
     install_skills "$CONFIG_DIR" ".claude"
   else
     # Standalone: write directly into vault/ (original behavior)
+    mkdir -p "$VAULT_DIR/.claude"
     merge_hooks_json "$VAULT_DIR/.claude/settings.json" "$HOOKS_REL/claude"
     echo "  [+] .claude/settings.json (3 hooks)"
 
@@ -381,7 +399,7 @@ echo "=== Done ==="
 echo ""
 
 if [ "$MODE" = "integrated" ]; then
-  echo "Vault created at: $VAULT_DIR"
+  echo "Vault created at: .vault/ (gitignored — per-user local data)"
   echo "Hooks registered at: $CONFIG_DIR/"
   echo ""
   echo "Next steps:"

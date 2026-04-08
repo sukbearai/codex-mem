@@ -81,22 +81,22 @@ else
   fail "init" "unexpected: $OUT"
 fi
 
-if [ -f "$DIR/vault/.codex-vault/version" ]; then
+if [ -f "$DIR/.vault/.codex-vault/version" ]; then
   pass "init writes version file"
 else
   fail "init version file" "not found"
 fi
 
-if [ -f "$DIR/vault/Home.md" ]; then
-  pass "init creates vault/Home.md"
+if [ -f "$DIR/.vault/Home.md" ]; then
+  pass "init creates .vault/Home.md"
 else
   fail "init Home.md" "not found"
 fi
 
-if [ -f "$DIR/CLAUDE.md" ] || [ -f "$DIR/vault/CLAUDE.md" ]; then
+if [ -f "$DIR/CLAUDE.md" ] || [ -f "$DIR/.vault/CLAUDE.md" ]; then
   pass "init creates CLAUDE.md"
 else
-  fail "init CLAUDE.md" "not found at root or vault/"
+  fail "init CLAUDE.md" "not found at root or .vault/"
 fi
 
 # --- Init again (idempotent) ---
@@ -117,7 +117,7 @@ else
 fi
 
 # --- Simulate older version for upgrade ---
-echo "0.0.1" > "$DIR/vault/.codex-vault/version"
+echo "0.0.1" > "$DIR/.vault/.codex-vault/version"
 OUT=$(node "$CLI" upgrade 2>&1)
 if echo "$OUT" | grep -q "Upgrading"; then
   pass "upgrade from older version"
@@ -134,16 +134,10 @@ else
   fail "uninstall" "$OUT"
 fi
 
-if [ ! -d "$DIR/vault/.codex-vault" ]; then
-  pass "uninstall removes .codex-vault/"
+if [ ! -d "$DIR/.vault" ]; then
+  pass "uninstall removes .vault/"
 else
-  fail "uninstall cleanup" ".codex-vault/ still exists"
-fi
-
-if [ -f "$DIR/vault/Home.md" ]; then
-  pass "uninstall preserves vault data"
-else
-  fail "uninstall data" "vault data deleted"
+  fail "uninstall cleanup" ".vault/ still exists"
 fi
 
 # --- Uninstall again ---
@@ -155,8 +149,8 @@ fi
 
 # --- Legacy codex-mem detection ---
 echo "--- legacy detection ---"
-mkdir -p "$DIR/vault/.codex-mem"
-echo "0.0.1" > "$DIR/vault/.codex-mem/version"
+mkdir -p "$DIR/.vault/.codex-mem"
+echo "0.0.1" > "$DIR/.vault/.codex-mem/version"
 
 OUT=$(node "$CLI" init 2>&1)
 if echo "$OUT" | grep -q "Legacy codex-mem"; then
@@ -172,7 +166,7 @@ else
 fi
 
 OUT=$(node "$CLI" uninstall 2>&1)
-if [ ! -d "$DIR/vault/.codex-mem" ]; then
+if [ ! -d "$DIR/.vault/.codex-mem" ]; then
   pass "uninstall removes legacy .codex-mem/"
 else
   fail "uninstall legacy" ".codex-mem/ still exists"

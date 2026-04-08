@@ -34,7 +34,7 @@ Runs on every user message. Scans for keywords and injects routing hints:
 - "Shipped the feature" → hint: note the win
 - "Sprint update" → hint: update the active work note
 
-**Two modes** (configured via `vault/.codex-vault/config.json`):
+**Two modes** (configured via `.vault/.codex-vault/config.json` for integrated installs, `vault/.codex-vault/config.json` for standalone):
 
 - **suggest** (default) — the agent suggests skills, you decide whether to run them
 - **auto** — the agent executes skills immediately on intent detection
@@ -85,7 +85,7 @@ npx @suwujs/codex-vault upgrade     # Upgrade hooks/skills (preserves data)
 npx @suwujs/codex-vault uninstall   # Remove hooks/skills (preserves data)
 ```
 
-The CLI is a thin wrapper around `plugin/install.sh`. It adds version tracking (`vault/.codex-vault/version`), backup on upgrade, and precise cleanup on uninstall.
+The CLI is a thin wrapper around `plugin/install.sh`. It adds version tracking (`.vault/.codex-vault/version` for integrated installs, `vault/.codex-vault/version` for standalone), backup on upgrade, and precise cleanup on uninstall.
 
 ## Why Hooks (Not RAG)
 

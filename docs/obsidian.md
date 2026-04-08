@@ -4,7 +4,7 @@ Codex-Vault 的 vault 目录可直接作为 Obsidian vault 使用。
 
 ## 基础设置
 
-1. 用 Obsidian 打开 vault/ 目录
+1. 用 Obsidian 打开 vault 目录（集成安装为 `.vault/`，独立模式为 `vault/`）
 2. `[[wikilinks]]` 自动渲染为可点击链接
 3. Graph View 可视化知识网络
 4. YAML frontmatter 支持 Dataview 插件查询

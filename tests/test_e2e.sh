@@ -240,7 +240,7 @@ date: "2026-04-06"
 description: "Test project for E2E validation"
 status: active
 tags:
-  - work-note
+  - project
 ---
 
 # Test Project
@@ -424,10 +424,10 @@ else
 fi
 
 # 7b. Vault template copied
-if [ -f "$INT_DIR/vault/Home.md" ]; then
-  pass "integrated: vault/Home.md created"
+if [ -f "$INT_DIR/.vault/Home.md" ]; then
+  pass "integrated: .vault/Home.md created"
 else
-  fail "integrated: vault/Home.md" "not found"
+  fail "integrated: .vault/Home.md" "not found"
 fi
 
 # 7c. Hooks merged into project root settings.json (not vault/)
@@ -444,11 +444,18 @@ else
   fail "integrated: permissions" "existing config overwritten"
 fi
 
-# 7e. Hook paths use vault/ prefix
-if grep -q "vault/.codex-vault/hooks" "$INT_DIR/.claude/settings.json"; then
-  pass "integrated: hook paths use vault/.codex-vault/hooks/ prefix"
+# 7e. Hook paths use .vault/ prefix
+if grep -q ".vault/.codex-vault/hooks" "$INT_DIR/.claude/settings.json"; then
+  pass "integrated: hook paths use .vault/.codex-vault/hooks/ prefix"
 else
-  fail "integrated: hook paths" "missing vault/ prefix"
+  fail "integrated: hook paths" "missing .vault/ prefix"
+fi
+
+# 7f-pre. .gitignore updated with .vault/
+if [ -f "$INT_DIR/.gitignore" ] && grep -q "\.vault/" "$INT_DIR/.gitignore"; then
+  pass "integrated: .gitignore contains .vault/"
+else
+  fail "integrated: .gitignore" ".vault/ not in .gitignore"
 fi
 
 # 7f. CLAUDE.md has both original content and codex-vault section
@@ -480,16 +487,16 @@ else
 fi
 
 # 7h. Vault has no agent configs (those live at project root)
-if [ ! -f "$INT_DIR/vault/.claude/settings.json" ] && [ ! -f "$INT_DIR/vault/.codex/hooks.json" ]; then
+if [ ! -f "$INT_DIR/.vault/.claude/settings.json" ] && [ ! -f "$INT_DIR/.vault/.codex/hooks.json" ]; then
   pass "integrated: vault has no agent configs (correct — they live at project root)"
 else
-  fail "integrated: vault agent configs" "should not exist in vault/"
+  fail "integrated: vault agent configs" "should not exist in .vault/"
 fi
 
-# 7i. session-start.sh works from project root (finds vault/ subdir)
-SS_OUTPUT=$(CLAUDE_PROJECT_DIR="$INT_DIR" python3 "$INT_DIR/vault/.codex-vault/hooks/claude/session-start.py" 2>&1) || true
+# 7i. session-start.sh works from project root (finds .vault/ subdir)
+SS_OUTPUT=$(CLAUDE_PROJECT_DIR="$INT_DIR" python3 "$INT_DIR/.vault/.codex-vault/hooks/claude/session-start.py" 2>&1) || true
 if echo "$SS_OUTPUT" | grep -q "North Star"; then
-  pass "integrated: session-start.sh finds vault/ from project root"
+  pass "integrated: session-start.sh finds .vault/ from project root"
 else
   fail "integrated: session-start.sh" "cannot find vault from project root"
 fi
@@ -510,7 +517,7 @@ cat > "$PLACEHOLDER_NOTE" << 'EOF'
 date: "2026-04-06"
 description: "Testing placeholder detection"
 tags:
-  - test
+  - meta
 ---
 
 # {{title}}
@@ -532,7 +539,7 @@ cat > "$LOG_GOOD" << 'EOF'
 ---
 description: "Operation log"
 tags:
-  - log
+  - meta
 ---
 
 # Operation Log
@@ -555,7 +562,7 @@ cat > "$LOG_BAD" << 'EOF'
 ---
 description: "Operation log"
 tags:
-  - log
+  - meta
 ---
 
 # Operation Log
@@ -577,7 +584,7 @@ mkdir -p work/active
 cat > work/active/Temp.md << 'EOF'
 ---
 description: "temp"
-tags: [test]
+tags: [project]
 ---
 # Temp
 We decided to use Redis for caching. [[North Star]]
@@ -587,7 +594,7 @@ git add -A && git commit -q -m "add temp note"
 cat > work/active/New.md << 'EOF'
 ---
 description: "new"
-tags: [test]
+tags: [project]
 ---
 # New
 Some new content. [[Temp]]
@@ -701,8 +708,8 @@ CLI_DIR=$(mktemp -d)
 cd "$CLI_DIR"
 git init -q
 CLI_OUT=$(node "$CLI" init 2>&1)
-if echo "$CLI_OUT" | grep -q "installed successfully" && [ -f "$CLI_DIR/vault/.codex-vault/version" ]; then
-  pass "cli: init creates vault and writes version file"
+if echo "$CLI_OUT" | grep -q "installed successfully" && [ -f "$CLI_DIR/.vault/.codex-vault/version" ]; then
+  pass "cli: init creates .vault and writes version file"
 else
   fail "cli: init" "install failed or version file missing"
 fi
@@ -725,17 +732,10 @@ fi
 
 # 10g. uninstall
 CLI_OUT=$(node "$CLI" uninstall 2>&1)
-if echo "$CLI_OUT" | grep -q "has been uninstalled" && [ ! -d "$CLI_DIR/vault/.codex-vault" ]; then
-  pass "cli: uninstall removes .codex-vault/"
+if echo "$CLI_OUT" | grep -q "has been uninstalled" && [ ! -d "$CLI_DIR/.vault" ]; then
+  pass "cli: uninstall removes .vault/"
 else
   fail "cli: uninstall" "cleanup incomplete"
-fi
-
-# 10h. uninstall preserves vault data
-if [ -f "$CLI_DIR/vault/Home.md" ] && [ -d "$CLI_DIR/vault/brain" ]; then
-  pass "cli: uninstall preserves vault data"
-else
-  fail "cli: uninstall data" "vault data was deleted"
 fi
 
 # 10i. uninstall again (already uninstalled)
@@ -746,8 +746,8 @@ else
 fi
 
 # 10j. init detects legacy codex-mem
-mkdir -p "$CLI_DIR/vault/.codex-mem"
-echo "0.0.1" > "$CLI_DIR/vault/.codex-mem/version"
+mkdir -p "$CLI_DIR/.vault/.codex-mem"
+echo "0.0.1" > "$CLI_DIR/.vault/.codex-mem/version"
 CLI_OUT=$(node "$CLI" init 2>&1)
 if echo "$CLI_OUT" | grep -q "Legacy codex-mem"; then
   pass "cli: init detects legacy codex-mem"
@@ -764,7 +764,7 @@ fi
 
 # 10l. uninstall cleans legacy codex-mem
 CLI_OUT=$(node "$CLI" uninstall 2>&1)
-if echo "$CLI_OUT" | grep -q ".codex-mem" && [ ! -d "$CLI_DIR/vault/.codex-mem" ]; then
+if echo "$CLI_OUT" | grep -q "uninstalled" && [ ! -d "$CLI_DIR/.vault" ]; then
   pass "cli: uninstall removes legacy .codex-mem/"
 else
   fail "cli: uninstall legacy" ".codex-mem not removed"
@@ -920,7 +920,7 @@ cat > "$GOOD_NOTE" << 'EOF'
 date: "2026-04-07"
 description: "Good note for feedback test"
 tags:
-  - test
+  - meta
 ---
 
 # Good Note

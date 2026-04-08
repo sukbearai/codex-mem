@@ -85,16 +85,17 @@ def _match(patterns, text):
 
 
 def _find_vault_root():
-    """Find vault root from CWD — check for Home.md/brain/, then vault/ subdir."""
+    """Find vault root from CWD — check for Home.md/brain/, then .vault/ or vault/ subdir."""
     cwd = os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd())
     if os.path.isfile(os.path.join(cwd, "Home.md")) or os.path.isdir(os.path.join(cwd, "brain")):
         return cwd
-    vault_sub = os.path.join(cwd, "vault")
-    if os.path.isdir(vault_sub) and (
-        os.path.isfile(os.path.join(vault_sub, "Home.md")) or
-        os.path.isdir(os.path.join(vault_sub, "brain"))
-    ):
-        return vault_sub
+    for subdir in (".vault", "vault"):
+        vault_sub = os.path.join(cwd, subdir)
+        if os.path.isdir(vault_sub) and (
+            os.path.isfile(os.path.join(vault_sub, "Home.md")) or
+            os.path.isdir(os.path.join(vault_sub, "brain"))
+        ):
+            return vault_sub
     return None
 
 

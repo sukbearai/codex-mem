@@ -29,7 +29,9 @@ npx @suwujs/codex-vault init
 claude                                  # or: codex
 ```
 
-Fill in `vault/brain/North Star.md` with your goals, then start talking.
+Fill in `.vault/brain/North Star.md` with your goals, then start talking.
+
+> **Integrated mode** (the default when you run `init` inside another project) creates `.vault/` — a hidden, gitignored directory so each developer keeps their own local vault without merge conflicts. **Standalone mode** (inside the codex-vault repo itself) still uses `vault/`.
 
 <details>
 <summary>Alternative: install from source</summary>
@@ -39,7 +41,7 @@ git clone https://github.com/sukbearai/codex-vault.git /tmp/codex-vault
 bash /tmp/codex-vault/plugin/install.sh
 ```
 
-> **Standalone mode**: run `install.sh` from inside the codex-vault repo itself to use `vault/` as the working directory.
+> **Standalone mode**: run `install.sh` from inside the codex-vault repo itself to use `vault/` (not `.vault/`) as the working directory.
 </details>
 
 ## How It Works
@@ -81,8 +83,10 @@ Hooks power the loop:
 
 ## Vault Structure
 
+In integrated mode the vault lives at `.vault/` (hidden, gitignored by default). In standalone mode it lives at `vault/`. The internal layout is the same:
+
 ```
-vault/
+.vault/                   (integrated) or vault/ (standalone)
   Home.md                 Entry point — current focus, quick links
   SCHEMA.md               Domain scope, tag taxonomy, page thresholds
   log.md                  Append-only operation log — grep-parseable
@@ -115,7 +119,7 @@ User-invoked skills — the agent suggests them, but only executes when you expl
 | `/recall` | On-demand memory retrieval — search the vault for a topic and synthesize |
 | `/lint` | Vault health audit — 13 checks for broken links, orphans, stale content, tag drift, and more |
 
-The classify hook detects intent (decision, win, project update, query, ingest) and suggests the right skill. By default, you decide whether to run it (**suggest mode**). Set `{"classify_mode": "auto"}` in `vault/.codex-vault/config.json` to have the agent execute skills automatically (**auto mode**).
+The classify hook detects intent (decision, win, project update, query, ingest) and suggests the right skill. By default, you decide whether to run it (**suggest mode**). Set `{"classify_mode": "auto"}` in `.vault/.codex-vault/config.json` (or `vault/.codex-vault/config.json` in standalone mode) to have the agent execute skills automatically (**auto mode**).
 
 Claude Code uses `/skill-name`, Codex CLI uses `$skill-name`. Both read from their respective `.claude/skills/` and `.codex/skills/` directories.
 
@@ -182,15 +186,16 @@ See [docs/usage.md](docs/usage.md) — 7 real scenarios from first session to pr
 | Your goals | Edit `brain/North Star.md` |
 | New note types | Add templates to `templates/`, update `plugin/instructions.md` |
 | More signals | Add patterns to `plugin/hooks/classify-message.py` |
-| Auto-execute skills | Set `{"classify_mode": "auto"}` in `vault/.codex-vault/config.json` |
+| Auto-execute skills | Set `{"classify_mode": "auto"}` in `.vault/.codex-vault/config.json` (or `vault/.codex-vault/config.json` in standalone) |
 | New agent | Add hooks and skills in `plugin/` ([guide](docs/adding-an-agent.md)) |
 
 ## CLI
 
 ```bash
-npx @suwujs/codex-vault init        # Install vault + hooks into current project
+npx @suwujs/codex-vault init        # Install .vault/ + hooks into current project
 npx @suwujs/codex-vault upgrade     # Upgrade hooks and skills (preserves vault data)
 npx @suwujs/codex-vault uninstall   # Remove hooks and skills (preserves vault data)
+# init adds .vault/ to .gitignore automatically — each developer gets their own local vault.
 ```
 
 ## Testing

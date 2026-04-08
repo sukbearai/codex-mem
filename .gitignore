@@ -13,6 +13,9 @@ vault/.claude/*
 vault/.codex/
 vault/.codex-vault/
 
+# Integrated mode vault (gitignored per-user data)
+.vault/
+
 # Thinking / scratchpad
 vault/thinking/session-logs/
 

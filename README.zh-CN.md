@@ -73,7 +73,9 @@ npx @suwujs/codex-vault init
 claude                                  # 或: codex
 ```
 
-填好 `vault/brain/North Star.md`，开始对话。
+填好 `.vault/brain/North Star.md`，开始对话。
+
+> **集成模式**（在其他项目中运行 `init` 时的默认行为）会创建 `.vault/` — 一个隐藏目录，自动加入 `.gitignore`，每个开发者各自拥有本地 vault，不会产生合并冲突。**独立模式**（在 codex-vault 仓库内）仍然使用 `vault/`。
 
 <details>
 <summary>其他安装方式：从源码安装</summary>
@@ -83,7 +85,7 @@ git clone https://github.com/sukbearai/codex-vault.git /tmp/codex-vault
 bash /tmp/codex-vault/plugin/install.sh
 ```
 
-> **独立模式**：在 codex-vault 仓库内运行 `install.sh`，以 `vault/` 为工作目录。
+> **独立模式**：在 codex-vault 仓库内运行 `install.sh`，以 `vault/`（而非 `.vault/`）为工作目录。
 </details>
 
 ## 工作原理
@@ -120,8 +122,10 @@ Hook 驱动整个循环：
 
 ## Vault 结构
 
+集成模式下 vault 位于 `.vault/`（隐藏目录，默认已 gitignore）。独立模式下位于 `vault/`。内部结构相同：
+
 ```
-vault/
+.vault/                   （集成模式）或 vault/（独立模式）
   Home.md                 入口 — 当前焦点、快速链接
   SCHEMA.md               域定义、标签分类法、页面阈值
   log.md                  操作日志（append-only）
@@ -172,9 +176,10 @@ vault/
 ## CLI
 
 ```bash
-npx @suwujs/codex-vault init        # 安装 vault + hooks 到当前项目
+npx @suwujs/codex-vault init        # 安装 .vault/ + hooks 到当前项目
 npx @suwujs/codex-vault upgrade     # 升级 hooks 和 skills（保留 vault 数据）
 npx @suwujs/codex-vault uninstall   # 移除 hooks 和 skills（保留 vault 数据）
+# init 会自动将 .vault/ 加入 .gitignore — 每位开发者拥有独立的本地 vault。
 ```
 
 ## 测试
@@ -189,7 +194,7 @@ npm run test:hooks      # Hook 脚本测试（33 个）
 
 | 配置项 | 文件 | 说明 |
 |--------|------|------|
-| 自动执行 skills | `vault/.codex-vault/config.json` | `{"classify_mode": "auto"}` — 检测到意图后自动执行对应 skill，而非建议 |
+| 自动执行 skills | `.vault/.codex-vault/config.json`（独立模式为 `vault/.codex-vault/config.json`） | `{"classify_mode": "auto"}` — 检测到意图后自动执行对应 skill，而非建议 |
 
 ## 依赖
 
