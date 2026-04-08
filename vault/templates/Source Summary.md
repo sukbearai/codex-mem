@@ -4,22 +4,19 @@ description: "{{description}}"
 source: "{{source_url_or_filename}}"
 tags:
   - source-summary
+type: source-summary
 ---
 
 # {{title}}
 
 ## Key Takeaways
-
-- _Top insights from this source_
+<!-- 3-5 个核心要点 -->
 
 ## Summary
-
-_Concise summary of the source material in your own words._
+<!-- 源材料的结构化摘要 -->
 
 ## Connections
+<!-- 与 vault 中其他笔记的关联 [[wikilinks]] -->
 
-- _[[wikilinks]] to related vault notes — existing work, decisions, patterns_
-
-## Quotes / Data Points
-
-- _Notable quotes, statistics, or data worth preserving_
+## Quotes & Data Points
+<!-- 值得保留的原文引用和数据 -->

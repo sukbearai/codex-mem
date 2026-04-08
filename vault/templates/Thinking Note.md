@@ -3,23 +3,18 @@ date: "{{date}}"
 description: "{{description}}"
 tags:
   - thinking
+type: thinking
 ---
 
 # {{title}}
 
 _Scratchpad. Promote findings to proper notes when done, then delete this file._
 
-## Question
+## Idea
+<!-- 想法/草稿内容 -->
 
-_What am I trying to figure out?_
-
-## Analysis
-
--
-
-## Conclusion
-
--
+## Next Steps
+<!-- 下一步：promote 到正式笔记，还是删除 -->
 
 ## Promoted To
 

@@ -4,26 +4,22 @@ description: "{{description}}"
 status: proposed
 tags:
   - decision
+type: decision
 ---
 
 # {{title}}
 
 ## Context
-
-_What is the situation? What forces are at play?_
+<!-- 面临什么问题/决策 -->
 
 ## Decision
-
-_What was decided?_
+<!-- 最终决定了什么 -->
 
 ## Alternatives Considered
-
-- _What else was considered and why it was rejected?_
+<!-- 考虑过哪些方案 -->
 
 ## Consequences
-
-_What are the implications of this decision?_
+<!-- 这个决策带来的后果/影响 -->
 
 ## Related
-
-- _[[wikilinks]] to related work notes_
+<!-- [[wikilinks]] -->

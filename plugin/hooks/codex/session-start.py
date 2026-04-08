@@ -125,6 +125,58 @@ def _north_star_goal(vault_dir):
     return None
 
 
+def _extract_schema_sections(vault_dir):
+    """Extract Tag Taxonomy and Page Thresholds from SCHEMA.md.
+
+    Returns a list of context lines, or empty list if SCHEMA.md is missing.
+    """
+    schema_path = os.path.join(vault_dir, "SCHEMA.md")
+    if not os.path.isfile(schema_path):
+        return []
+    content = _read_file(schema_path)
+    if not content:
+        return []
+
+    lines_out = []
+
+    # Extract Tag Taxonomy items (lines starting with "- " under ## Tag Taxonomy)
+    tags = []
+    in_tags = False
+    for line in content.splitlines():
+        if re.match(r"^## Tag Taxonomy", line):
+            in_tags = True
+            continue
+        if in_tags and line.startswith("## "):
+            break
+        if in_tags and re.match(r"^- .+", line):
+            tags.append(line)
+
+    if tags:
+        lines_out.append("**Tags:** " + ", ".join(
+            t.split("—")[0].strip().lstrip("- ") for t in tags
+        ))
+
+    # Extract Page Thresholds (lines starting with "- " under ## Page Thresholds)
+    thresholds = []
+    in_thresh = False
+    for line in content.splitlines():
+        if re.match(r"^## Page Thresholds", line):
+            in_thresh = True
+            continue
+        if in_thresh and line.startswith("## "):
+            break
+        if in_thresh and line.strip().startswith("- "):
+            thresholds.append(line.strip())
+
+    if thresholds:
+        if lines_out:
+            lines_out.append("")
+        lines_out.append("**Page thresholds:**")
+        lines_out.extend(thresholds)
+
+    return lines_out
+
+
 # ── Context builder (→ additionalContext for LLM) ──────────────────────
 
 
@@ -147,6 +199,13 @@ def _build_context(vault_dir):
     else:
         lines.append("(No North Star found — create brain/North Star.md to set goals)")
     lines.append("")
+
+    # Schema (from SCHEMA.md)
+    schema_lines = _extract_schema_sections(vault_dir)
+    if schema_lines:
+        lines.append("### Schema")
+        lines.extend(schema_lines)
+        lines.append("")
 
     # Recent changes — adaptive window
     lines.append("### Recent Changes")

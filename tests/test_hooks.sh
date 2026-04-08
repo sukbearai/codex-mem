@@ -188,7 +188,7 @@ cat > "$GOOD" << 'EOF'
 ---
 date: "2026-04-07"
 description: "Good note"
-tags: [test]
+tags: [meta]
 ---
 # Good
 Content with [[wikilinks]].

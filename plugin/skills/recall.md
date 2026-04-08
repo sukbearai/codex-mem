@@ -4,11 +4,14 @@ description: "Search vault memory for a topic — finds relevant notes across br
 license: MIT
 metadata:
   author: sukbearai
-  version: "1.0.0"
+  version: "1.1.0"
   homepage: "https://github.com/sukbearai/codex-vault"
 ---
 
 Search the vault for information about the given topic.
+
+### Step 0: Context Check
+Confirm session-start context is loaded (North Star, recent changes). If first vault skill use this session, read `work/Index.md` and `SCHEMA.md`.
 
 ### 1. Parse the Query
 
@@ -46,9 +49,30 @@ Present what the vault knows about this topic:
 - **Connections**: note any links between the matched notes
 - **Gaps**: flag if the vault has limited or no information on this topic
 
-### 5. Offer Writeback
+### 5. Writeback Decision
 
-If the synthesis is substantial (combines 3+ sources), offer to save it as a reference note.
+After synthesizing, evaluate whether the answer is worth saving as a reference note.
+
+**Save** (create `reference/` note) when any one condition is met:
+- Comparison: the answer compares 3+ entities or concepts side-by-side
+- Deep synthesis: the answer draws from 5+ vault pages
+- Novel connection: the answer reveals a cross-domain link not obvious in any single page
+- High reconstruction cost: re-deriving the answer would require reading 5+ pages
+
+**Do not save** when:
+- Simple lookup: the answer comes directly from 1-2 pages with no synthesis
+- Redundant: the answer largely duplicates an existing page
+- Ephemeral: the question is one-off and the answer will not be reused
+
+**When saving:**
+1. Create a reference note in `reference/` using the Reference Note template
+2. Fill `synthesized_from` in frontmatter with the list of vault pages used
+3. In related work notes, add a [[wikilink]] to the new reference note under `## Related`
+4. Update `work/Index.md` under the `## Reference` section
+5. Append to `log.md`: `## [YYYY-MM-DD] query | <question summary> → saved to reference/<note>`
+
+**When not saving:**
+- Append to `log.md`: `## [YYYY-MM-DD] query | <question summary> → answered inline`
 
 Topic to recall:
 $ARGUMENTS

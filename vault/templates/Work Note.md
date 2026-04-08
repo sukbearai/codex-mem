@@ -4,22 +4,23 @@ description: "{{description}}"
 status: active
 tags:
   - work-note
+type: work
 ---
 
 # {{title}}
 
 ## Context
+<!-- 背景：为什么做这件事 -->
 
-_What is this about? Why does it matter?_
+## What & Why
+<!-- 做了什么、为什么这样做 -->
 
-## What / Why
-
-_What was done or decided? Why this approach?_
+## Key Facts
+<!-- 关键事实和日期 -->
 
 ## Links
 
 - _External links: PRs, tickets, docs_
 
 ## Related
-
-- _[[wikilinks]] to related notes, people, decisions_
+<!-- [[wikilinks]] to related notes -->

@@ -10,6 +10,9 @@ metadata:
 
 Process the following freeform dump. For each distinct piece of information:
 
+### Step 0: Context Check
+Confirm session-start context is loaded (North Star, recent changes). If first vault skill use this session, read `work/Index.md` and `SCHEMA.md`.
+
 1. **Classify** it: decision, project update, win/achievement, or general work note.
 2. **Search first**: Check if a related note already exists. Prefer updating over creating.
 3. **Create or update** the appropriate note:

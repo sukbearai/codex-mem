@@ -2,24 +2,22 @@
 date: "{{date}}"
 description: "{{description}}"
 source: "query"
+synthesized_from: []  # vault pages used to compose this answer
 tags:
   - reference
+type: reference
 ---
 
 # {{title}}
 
 ## Question
-
-_The original question that prompted this answer._
+<!-- 被问的问题 -->
 
 ## Answer
-
-_The synthesized answer._
+<!-- 合成的回答 -->
 
 ## Sources
-
-- _[[wikilinks]] to vault notes used in the answer_
+<!-- 合成所用的 vault 页面 [[wikilinks]] -->
 
 ## Related
-
-- _[[wikilinks]] to related notes_
+<!-- 相关笔记 [[wikilinks]] -->
