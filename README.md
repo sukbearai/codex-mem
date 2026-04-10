@@ -195,7 +195,9 @@ See [docs/usage.md](docs/usage.md) — 7 real scenarios from first session to pr
 npx @suwujs/codex-vault init        # Install .vault/ + hooks into current project
 npx @suwujs/codex-vault upgrade     # Upgrade hooks and skills (preserves vault data)
 npx @suwujs/codex-vault uninstall   # Remove hooks and skills (preserves vault data)
-# init adds .vault/ to .gitignore automatically — each developer gets their own local vault.
+npx @suwujs/codex-vault doctor      # Diagnose git conflicts from agent configs
+npx @suwujs/codex-vault doctor --fix  # Auto-fix: gitignore, untrack, migrate vault/→.vault/
+# init adds .vault/, .claude/, .codex/ to .gitignore automatically — each developer gets their own local vault.
 ```
 
 ## Testing

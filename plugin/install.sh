@@ -86,16 +86,36 @@ if [ "$MODE" = "integrated" ]; then
   fi
   echo ""
 
-  # Add .vault to .gitignore if not already present
+  # Add .vault, .claude, .codex to .gitignore if not already present
+  # These are per-user configs — committing them causes merge conflicts in teams.
   GITIGNORE="$PROJECT_DIR/.gitignore"
-  if [ -f "$GITIGNORE" ]; then
-    if ! grep -q "^\.vault/" "$GITIGNORE" && ! grep -q "^\.vault$" "$GITIGNORE"; then
-      printf '\n# Codex-Vault — local knowledge base (per-user, not shared)\n.vault/\n' >> "$GITIGNORE"
-      echo "[+] Added .vault/ to .gitignore"
-    fi
+  GITIGNORE_ENTRIES=(".vault/" ".claude/" ".codex/")
+  GITIGNORE_ADDED=()
+
+  if [ ! -f "$GITIGNORE" ]; then
+    printf '# Per-user agent configs (avoid conflicts in multi-user repos)\n' > "$GITIGNORE"
+    for entry in "${GITIGNORE_ENTRIES[@]}"; do
+      printf '%s\n' "$entry" >> "$GITIGNORE"
+      GITIGNORE_ADDED+=("$entry")
+    done
   else
-    printf '# Codex-Vault — local knowledge base (per-user, not shared)\n.vault/\n' > "$GITIGNORE"
-    echo "[+] Created .gitignore with .vault/"
+    for entry in "${GITIGNORE_ENTRIES[@]}"; do
+      pattern="^$(printf '%s' "$entry" | sed 's/\./\\./g')"
+      bare="${entry%/}"
+      if ! grep -q "$pattern" "$GITIGNORE" && ! grep -q "^${bare}$" "$GITIGNORE"; then
+        GITIGNORE_ADDED+=("$entry")
+      fi
+    done
+    if [ ${#GITIGNORE_ADDED[@]} -gt 0 ]; then
+      printf '\n# Per-user agent configs (avoid conflicts in multi-user repos)\n' >> "$GITIGNORE"
+      for entry in "${GITIGNORE_ADDED[@]}"; do
+        printf '%s\n' "$entry" >> "$GITIGNORE"
+      done
+    fi
+  fi
+
+  if [ ${#GITIGNORE_ADDED[@]} -gt 0 ]; then
+    echo "[+] Added ${GITIGNORE_ADDED[*]} to .gitignore"
   fi
   echo ""
 fi

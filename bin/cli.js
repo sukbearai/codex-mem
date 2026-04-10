@@ -35,6 +35,10 @@ switch (cmd) {
     cmdUninstall();
     break;
 
+  case 'doctor':
+    cmdDoctor();
+    break;
+
   default:
     console.error(`Unknown command: ${cmd}\n`);
     printHelp();
@@ -48,6 +52,7 @@ Usage:
   codex-vault init          Install vault into current directory (default)
   codex-vault upgrade       Upgrade existing vault to latest version
   codex-vault uninstall     Remove vault and all integration files
+  codex-vault doctor        Diagnose and fix git conflicts from agent configs
   codex-vault -v, --version Print version
   codex-vault -h, --help    Print this help`);
 }
@@ -171,17 +176,27 @@ function migrateVaultDir() {
     }
   }
 
-  // Add .vault/ to .gitignore
+  // Add .vault/, .claude/, .codex/ to .gitignore
   const gitignorePath = path.join(cwd, '.gitignore');
-  if (fs.existsSync(gitignorePath)) {
-    const content = fs.readFileSync(gitignorePath, 'utf8');
-    if (!content.includes('.vault/') && !content.match(/^\.vault$/m)) {
-      fs.appendFileSync(gitignorePath, '\n# Codex-Vault — local knowledge base (per-user, not shared)\n.vault/\n');
-      console.log('  [+] Added .vault/ to .gitignore');
+  const entriesToAdd = ['.vault/', '.claude/', '.codex/'];
+  let gitignoreContent = fs.existsSync(gitignorePath) ? fs.readFileSync(gitignorePath, 'utf8') : '';
+
+  const missing = entriesToAdd.filter((entry) => {
+    const bare = entry.replace(/\/$/, '');
+    const escaped = entry.replace(/\./g, '\\.');
+    return !new RegExp(`^${escaped}`, 'm').test(gitignoreContent) &&
+           !new RegExp(`^${bare.replace(/\./g, '\\.')}$`, 'm').test(gitignoreContent);
+  });
+
+  if (missing.length > 0) {
+    const block = '\n# Per-user agent configs (avoid conflicts in multi-user repos)\n' +
+      missing.map((e) => e + '\n').join('');
+    if (gitignoreContent) {
+      fs.appendFileSync(gitignorePath, block);
+    } else {
+      fs.writeFileSync(gitignorePath, block.trimStart());
     }
-  } else {
-    fs.writeFileSync(gitignorePath, '# Codex-Vault — local knowledge base (per-user, not shared)\n.vault/\n');
-    console.log('  [+] Created .gitignore with .vault/');
+    console.log(`  [+] Added ${missing.join(', ')} to .gitignore`);
   }
 
   console.log('  [+] Migration complete — vault data preserved in .vault/');
@@ -246,6 +261,209 @@ function cmdUpgrade() {
   }
 
   console.log(`\nUpgraded to v${VERSION} successfully.`);
+}
+
+// ---------------------------------------------------------------------------
+// doctor
+// ---------------------------------------------------------------------------
+
+function cmdDoctor() {
+  const cwd = process.cwd();
+  const fix = args.includes('--fix');
+
+  // Must be inside a git repo
+  const gitCheck = spawnSync('git', ['rev-parse', '--show-toplevel'], { cwd, encoding: 'utf8' });
+  if (gitCheck.status !== 0) {
+    console.error('Not a git repository. Run this from your project root.');
+    process.exit(1);
+  }
+  const gitRoot = gitCheck.stdout.trim();
+
+  console.log(`codex-vault doctor — checking ${path.basename(gitRoot)}/\n`);
+
+  let issues = 0;
+  let fixed = 0;
+
+  // ── Check 1: .gitignore entries ──
+  const EXPECTED_ENTRIES = ['.vault/', '.claude/', '.codex/'];
+  const gitignorePath = path.join(gitRoot, '.gitignore');
+  const gitignoreContent = fs.existsSync(gitignorePath) ? fs.readFileSync(gitignorePath, 'utf8') : '';
+
+  const missingEntries = EXPECTED_ENTRIES.filter((entry) => {
+    const bare = entry.replace(/\/$/, '');
+    const escaped = entry.replace(/\./g, '\\.');
+    return !new RegExp(`^${escaped}`, 'm').test(gitignoreContent) &&
+           !new RegExp(`^${bare.replace(/\./g, '\\.')}$`, 'm').test(gitignoreContent);
+  });
+
+  if (missingEntries.length > 0) {
+    issues += missingEntries.length;
+    for (const entry of missingEntries) {
+      console.log(`  [!] ${entry} not in .gitignore`);
+    }
+    if (fix) {
+      const block = '\n# Per-user agent configs (avoid conflicts in multi-user repos)\n' +
+        missingEntries.map((e) => e + '\n').join('');
+      if (gitignoreContent) {
+        fs.appendFileSync(gitignorePath, block);
+      } else {
+        fs.writeFileSync(gitignorePath, block.trimStart());
+      }
+      fixed += missingEntries.length;
+      console.log(`  [*] Added ${missingEntries.join(', ')} to .gitignore`);
+    }
+  }
+
+  // ── Check 2: tracked files that should be ignored ──
+  const DIRS_TO_CHECK = ['.vault', '.claude', '.codex'];
+  for (const dir of DIRS_TO_CHECK) {
+    const dirPath = path.join(gitRoot, dir);
+    if (!fs.existsSync(dirPath)) continue;
+
+    const lsResult = spawnSync('git', ['ls-files', dir], { cwd: gitRoot, encoding: 'utf8' });
+    const trackedFiles = (lsResult.stdout || '').trim().split('\n').filter(Boolean);
+
+    if (trackedFiles.length > 0) {
+      issues += trackedFiles.length;
+      console.log(`  [!] ${trackedFiles.length} tracked file(s) in ${dir}/`);
+      for (const f of trackedFiles) {
+        console.log(`      ${f}`);
+      }
+      if (fix) {
+        const rmResult = spawnSync('git', ['rm', '--cached', '-r', dir], { cwd: gitRoot, encoding: 'utf8' });
+        if (rmResult.status === 0) {
+          fixed += trackedFiles.length;
+          console.log(`  [*] Untracked ${dir}/ from git index`);
+        } else {
+          console.log(`  [!] Failed to untrack ${dir}/: ${(rmResult.stderr || '').trim()}`);
+        }
+      }
+    }
+  }
+
+  // ── Check 3: legacy vault/ → .vault/ migration ──
+  // Only in integrated mode (not the codex-vault repo itself)
+  const oldVault = path.join(gitRoot, 'vault');
+  const newVault = path.join(gitRoot, '.vault');
+  const standalone = fs.existsSync(path.join(gitRoot, 'plugin', 'install.sh')) &&
+                     fs.existsSync(path.join(gitRoot, 'vault', 'Home.md'));
+
+  if (!standalone && fs.existsSync(path.join(oldVault, 'Home.md'))) {
+    if (!fs.existsSync(newVault)) {
+      // Case A: vault/ exists, .vault/ doesn't — needs full migration
+      issues++;
+      console.log('  [!] Legacy vault/ directory found (should be .vault/)');
+      if (fix) {
+        fs.renameSync(oldVault, newVault);
+        // Clean stale agent configs inside .vault/
+        for (const sub of ['.claude', '.codex', 'CLAUDE.md', 'AGENTS.md']) {
+          const p = path.join(newVault, sub);
+          if (fs.existsSync(p)) fs.rmSync(p, { recursive: true, force: true });
+        }
+        fixed++;
+        console.log('  [*] Migrated vault/ → .vault/ (agent configs cleaned)');
+      }
+    } else {
+      // Case B: both vault/ and .vault/ exist — leftover
+      issues++;
+      console.log('  [!] Both vault/ and .vault/ exist (vault/ is likely a leftover)');
+      if (fix) {
+        console.log('      Review manually: remove vault/ if .vault/ has your data');
+      }
+    }
+  }
+
+  // ── Check 4: legacy codex-mem version file ──
+  for (const dir of ['.vault', 'vault']) {
+    const legacyVersion = path.join(gitRoot, dir, '.codex-mem', 'version');
+    if (fs.existsSync(legacyVersion)) {
+      issues++;
+      console.log(`  [!] Legacy .codex-mem/ found in ${dir}/ (renamed to .codex-vault/)`);
+      if (fix) {
+        const oldDir = path.join(gitRoot, dir, '.codex-mem');
+        const newDir = path.join(gitRoot, dir, '.codex-vault');
+        if (!fs.existsSync(newDir)) {
+          fs.renameSync(oldDir, newDir);
+          fixed++;
+          console.log(`  [*] Renamed ${dir}/.codex-mem/ → ${dir}/.codex-vault/`);
+        } else {
+          fs.rmSync(oldDir, { recursive: true, force: true });
+          fixed++;
+          console.log(`  [*] Removed stale ${dir}/.codex-mem/ (.codex-vault/ already exists)`);
+        }
+      }
+    }
+  }
+
+  // ── Check 5: stale agent configs inside .vault/ (should be at project root) ──
+  if (!standalone && fs.existsSync(newVault)) {
+    const staleConfigs = ['.claude', '.codex'].filter(
+      (sub) => fs.existsSync(path.join(newVault, sub))
+    );
+    if (staleConfigs.length > 0) {
+      issues++;
+      console.log(`  [!] Stale agent config(s) inside .vault/: ${staleConfigs.join(', ')}`);
+      console.log('      These should be at project root, not inside .vault/');
+      if (fix) {
+        for (const sub of staleConfigs) {
+          fs.rmSync(path.join(newVault, sub), { recursive: true, force: true });
+        }
+        fixed++;
+        console.log('  [*] Removed stale configs from .vault/ (run "codex-vault init" to regenerate at project root)');
+      }
+    }
+  }
+
+  // ── Check 6: merge conflict markers in config files ──
+  const CONFIG_FILES = [
+    '.claude/settings.json',
+    '.codex/hooks.json',
+    '.codex/config.toml',
+    'CLAUDE.md',
+    'AGENTS.md',
+  ];
+  for (const rel of CONFIG_FILES) {
+    const filePath = path.join(gitRoot, rel);
+    if (!fs.existsSync(filePath)) continue;
+
+    const content = fs.readFileSync(filePath, 'utf8');
+    if (/^[<=>]{7}\s/m.test(content)) {
+      issues++;
+      console.log(`  [!] Merge conflict markers in ${rel}`);
+      if (fix) {
+        console.log(`      Run: git checkout --theirs ${rel}  (or resolve manually)`);
+      }
+    }
+  }
+
+  // ── Check 7: JSON parse errors in config files ──
+  const JSON_FILES = ['.claude/settings.json', '.codex/hooks.json'];
+  for (const rel of JSON_FILES) {
+    const filePath = path.join(gitRoot, rel);
+    if (!fs.existsSync(filePath)) continue;
+
+    try {
+      JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    } catch (e) {
+      issues++;
+      console.log(`  [!] Invalid JSON in ${rel}: ${e.message}`);
+      if (fix) {
+        console.log(`      Run: codex-vault init  (to regenerate)`);
+      }
+    }
+  }
+
+  // ── Summary ──
+  console.log('');
+  if (issues === 0) {
+    console.log('All clear — no issues found.');
+  } else if (!fix) {
+    console.log(`Found ${issues} issue(s). Run "codex-vault doctor --fix" to auto-fix.`);
+  } else {
+    const remaining = issues - fixed;
+    console.log(`Fixed ${fixed}/${issues} issue(s).` +
+      (remaining > 0 ? ` ${remaining} need manual resolution.` : ''));
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -179,7 +179,9 @@ Hook 驱动整个循环：
 npx @suwujs/codex-vault init        # 安装 .vault/ + hooks 到当前项目
 npx @suwujs/codex-vault upgrade     # 升级 hooks 和 skills（保留 vault 数据）
 npx @suwujs/codex-vault uninstall   # 移除 hooks 和 skills（保留 vault 数据）
-# init 会自动将 .vault/ 加入 .gitignore — 每位开发者拥有独立的本地 vault。
+npx @suwujs/codex-vault doctor      # 诊断 agent 配置导致的 git 冲突
+npx @suwujs/codex-vault doctor --fix  # 自动修复：gitignore、取消追踪、迁移 vault/→.vault/
+# init 会自动将 .vault/、.claude/、.codex/ 加入 .gitignore — 每位开发者拥有独立的本地 vault。
 ```
 
 ## 测试

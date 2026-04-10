@@ -2,6 +2,10 @@
 .DS_Store
 Thumbs.db
 
+# Per-user agent configs (avoid conflicts in multi-user repos)
+.claude/
+.codex/
+
 # Obsidian
 .obsidian/
 .trash/
