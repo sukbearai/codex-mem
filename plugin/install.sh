@@ -131,14 +131,14 @@ hooks_rel = os.environ["CVAULT_HOOKS_REL"]
 new_hooks = {
     "SessionStart": [{
         "matcher": "startup|resume|compact",
-        "hooks": [{"type": "command", "command": f"python3 {hooks_rel}/session-start.py", "timeout": 30}]
+        "hooks": [{"type": "command", "command": f"python3 \"$CLAUDE_PROJECT_DIR/{hooks_rel}/session-start.py\"", "timeout": 30}]
     }],
     "UserPromptSubmit": [{
-        "hooks": [{"type": "command", "command": f"python3 {hooks_rel}/classify-message.py", "timeout": 15}]
+        "hooks": [{"type": "command", "command": f"python3 \"$CLAUDE_PROJECT_DIR/{hooks_rel}/classify-message.py\"", "timeout": 15}]
     }],
     "PostToolUse": [{
         "matcher": "Write|Edit",
-        "hooks": [{"type": "command", "command": f"python3 {hooks_rel}/validate-write.py", "timeout": 15}]
+        "hooks": [{"type": "command", "command": f"python3 \"$CLAUDE_PROJECT_DIR/{hooks_rel}/validate-write.py\"", "timeout": 15}]
     }],
 }
 
