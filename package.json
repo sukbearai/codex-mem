@@ -13,7 +13,11 @@
   "scripts": {
     "test": "bash tests/test_e2e.sh",
     "test:cli": "bash tests/test_cli.sh",
-    "test:hooks": "bash tests/test_hooks.sh"
+    "test:hooks": "bash tests/test_hooks.sh",
+    "release": "bumpp --git-check --execute \"npm test && npm run test:hooks && npm run test:cli && npm pack --dry-run\" --commit \"Release v%s\" --tag \"v%s\" --push",
+    "release:patch": "npm run release -- --release patch --yes",
+    "release:minor": "npm run release -- --release minor --yes",
+    "release:major": "npm run release -- --release major --yes"
   },
   "bin": {
     "codex-vault": "bin/cli.js"
@@ -34,5 +38,8 @@
     "knowledge-base",
     "obsidian",
     "vault"
-  ]
+  ],
+  "devDependencies": {
+    "bumpp": "^10.4.1"
+  }
 }

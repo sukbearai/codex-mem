@@ -238,11 +238,19 @@ npm run test:hooks      # Hook scripts only (33 tests)
 
 ### Release
 
-Publishing is handled by GitHub Actions. Add an npm automation token as the repository secret `NPM_TOKEN`, bump `package.json`, then push a matching version tag:
+Publishing is handled by GitHub Actions. Add an npm automation token as the repository secret `NPM_TOKEN`, then run a release script:
 
 ```bash
-git tag vX.Y.Z
-git push origin vX.Y.Z
+npm install
+npm run release:patch
+```
+
+The release script runs the full local verification suite, bumps `package.json` and `package-lock.json`, commits `Release vX.Y.Z`, tags `vX.Y.Z`, and pushes the commit and tag. The pushed tag triggers the npm publish workflow.
+
+For a specific version, run:
+
+```bash
+npm run release -- --release 1.0.0 --yes
 ```
 
 ## Requirements

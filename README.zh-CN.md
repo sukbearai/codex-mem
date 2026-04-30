@@ -222,11 +222,19 @@ npm run test:hooks      # Hook 脚本测试（33 个）
 
 ### 发布
 
-发包由 GitHub Actions 处理。先把 npm automation token 配成仓库 secret `NPM_TOKEN`，更新 `package.json` 版本号，然后推送匹配的版本 tag：
+发包由 GitHub Actions 处理。先把 npm automation token 配成仓库 secret `NPM_TOKEN`，然后运行 release 脚本：
 
 ```bash
-git tag vX.Y.Z
-git push origin vX.Y.Z
+npm install
+npm run release:patch
+```
+
+release 脚本会先跑完整本地验证，再更新 `package.json` 和 `package-lock.json`，提交 `Release vX.Y.Z`，打 `vX.Y.Z` tag，并推送 commit 和 tag。tag 推送后会触发 npm publish workflow。
+
+指定版本发布：
+
+```bash
+npm run release -- --release 1.0.0 --yes
 ```
 
 ## 配置
