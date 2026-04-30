@@ -17,8 +17,8 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-pass() { ((PASS++)); echo -e "  ${GREEN}PASS${NC} $1"; }
-fail() { ((FAIL++)); ERRORS+=("$1: $2"); echo -e "  ${RED}FAIL${NC} $1 — $2"; }
+pass() { PASS=$((PASS + 1)); echo -e "  ${GREEN}PASS${NC} $1"; }
+fail() { FAIL=$((FAIL + 1)); ERRORS+=("$1: $2"); echo -e "  ${RED}FAIL${NC} $1 — $2"; }
 configure_git_user() {
   git config user.email "codex-vault-tests@example.com"
   git config user.name "Codex Vault Tests"
@@ -39,7 +39,10 @@ cd "$TEST_DIR"
 git init -q && configure_git_user && git add -A && git commit -q -m "init"
 
 # Run installer
-OUTPUT=$(bash plugin/install.sh 2>&1)
+if ! OUTPUT=$(bash plugin/install.sh 2>&1); then
+  echo "$OUTPUT"
+  exit 1
+fi
 
 # Check Claude Code config generated
 if [ -f "vault/.claude/settings.json" ]; then

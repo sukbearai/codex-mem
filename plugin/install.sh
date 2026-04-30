@@ -324,7 +324,7 @@ install_skills() {
     local skill_dir="$target_dir/$agent_dir/skills/$skill_name"
     mkdir -p "$skill_dir"
     cp "$src_file" "$skill_dir/SKILL.md"
-    ((count++))
+    count=$((count + 1))
   done
 
   echo "  [+] $agent_dir/skills/ ($count skills)"
