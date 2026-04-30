@@ -29,7 +29,7 @@ If a vault has no `SCHEMA.md`, all schema-related features are skipped (backward
 All available tags are declared in `SCHEMA.md` under `## Tag Taxonomy`. Rules:
 
 - **Declare before use**: new tags must be added to `SCHEMA.md` before being used in a note's frontmatter
-- **Validation**: the validate-write hook warns when a note uses a tag not in the taxonomy (warning only — does not block writes)
+- **Validation**: Claude validate-write warns when a note uses a tag not in the taxonomy (warning only — does not block writes). Codex validate-write detects Bash command failures.
 - **Format**: each tag is a line `- tagname — description` under the `## Tag Taxonomy` heading
 
 ### Page Thresholds
@@ -185,7 +185,7 @@ The optional `type` frontmatter field classifies notes. Allowed values:
 - `reference` — synthesized reference notes
 - `thinking` — drafts / temporary ideas
 
-The field is optional for backward compatibility. When present, the validate-write hook warns if the value is not in the allowed list. Templates include the correct `type` value by default.
+The field is optional for backward compatibility. When present, Claude validate-write warns if the value is not in the allowed list. Templates include the correct `type` value by default.
 
 ## Source Traceability
 

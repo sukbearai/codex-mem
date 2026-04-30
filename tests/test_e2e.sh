@@ -410,6 +410,24 @@ git init -q
 # Pre-existing user config
 mkdir -p .claude
 echo '{"permissions":{"allow":["Read","Bash"]}}' > .claude/settings.json
+if command -v codex &>/dev/null; then
+  mkdir -p .codex
+  cat > .codex/hooks.json <<'EOF'
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {"type": "command", "command": "python3 .vault/.codex-vault/hooks/codex/session-start.py", "timeout": 15},
+          {"type": "command", "command": "echo user hook", "timeout": 5}
+        ]
+      }
+    ]
+  }
+}
+EOF
+fi
 echo "# My Cool Project" > CLAUDE.md
 echo "Existing instructions here." >> CLAUDE.md
 
@@ -484,6 +502,19 @@ if [ "$HOOK_COUNT" -eq 3 ]; then
   pass "integrated: idempotent — no duplicate hooks ($HOOK_COUNT entries)"
 else
   fail "integrated: idempotent hooks" "expected 3 hook entries, got $HOOK_COUNT"
+fi
+
+if command -v codex &>/dev/null; then
+  if python3 -c "import json; d=json.load(open('$INT_DIR/.codex/hooks.json')); pre=d.get('hooks',{}).get('PreToolUse',[]); assert not any('.codex-vault/hooks/codex/' in h.get('command','') for r in pre for h in r.get('hooks', []))" 2>/dev/null; then
+    pass "integrated: stale Codex PreToolUse vault hook removed"
+  else
+    fail "integrated: Codex PreToolUse cleanup" "stale vault hook still present"
+  fi
+  if python3 -c "import json; d=json.load(open('$INT_DIR/.codex/hooks.json')); assert any('validate-write.py' in h.get('command','') for r in d.get('hooks',{}).get('PostToolUse',[]) for h in r.get('hooks', []))" 2>/dev/null; then
+    pass "integrated: Codex PostToolUse vault hook installed"
+  else
+    fail "integrated: Codex PostToolUse hook" "validate-write.py missing"
+  fi
 fi
 
 # 7h. Vault has no agent configs (those live at project root)

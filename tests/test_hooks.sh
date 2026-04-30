@@ -98,6 +98,15 @@ else
   fail "codex/session-start: systemMessage" "missing [Vault] summary"
 fi
 
+# Misregistered tool event — no invalid additionalContext
+OUT=$(echo '{"hook_event_name":"PreToolUse","tool_name":"Read","tool_input":{"file_path":"README.md"}}' \
+  | python3 "$TEST_DIR/plugin/hooks/codex/session-start.py" 2>/dev/null)
+if [ -z "$OUT" ]; then
+  pass "codex/session-start: ignores non-SessionStart event"
+else
+  fail "codex/session-start: wrong event" "unexpected: $OUT"
+fi
+
 echo ""
 
 # ============================================================
@@ -175,6 +184,15 @@ else
   fail "codex/classify: false positive" "triggered on 'fix typo'"
 fi
 
+# Misregistered tool event — no invalid additionalContext
+OUT=$(echo '{"hook_event_name":"PreToolUse","tool_name":"Read","prompt":"we decided to use Redis"}' \
+  | python3 "$TEST_DIR/plugin/hooks/codex/classify-message.py" 2>/dev/null)
+if [ -z "$OUT" ]; then
+  pass "codex/classify: ignores non-UserPromptSubmit event"
+else
+  fail "codex/classify: wrong event" "unexpected: $OUT"
+fi
+
 echo ""
 
 # ============================================================
@@ -244,6 +262,12 @@ else
   fail "codex/validate: hard failure" "not blocked"
 fi
 
+if echo "$OUT" | grep -q "additionalContext"; then
+  fail "codex/validate: hard failure output" "contains unsupported additionalContext"
+else
+  pass "codex/validate: hard failure output has no additionalContext"
+fi
+
 # Permission denied
 OUT=$(echo '{"tool_name":"Bash","tool_input":{"command":"rm /etc/hosts"},"tool_response":"rm: /etc/hosts: Permission denied"}' \
   | python3 "$TEST_DIR/plugin/hooks/codex/validate-write.py" 2>/dev/null)
@@ -278,6 +302,15 @@ if [ -z "$OUT" ]; then
   pass "codex/validate: non-Bash tool ignored"
 else
   fail "codex/validate: non-Bash" "should be silent"
+fi
+
+# Misregistered PreToolUse event — no invalid additionalContext or block
+OUT=$(echo '{"hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"npm install"},"tool_response":"{\"exit_code\":1,\"stdout\":\"npm ERR! command not found: node\",\"stderr\":\"\"}"}' \
+  | python3 "$TEST_DIR/plugin/hooks/codex/validate-write.py" 2>/dev/null)
+if [ -z "$OUT" ]; then
+  pass "codex/validate: ignores non-PostToolUse event"
+else
+  fail "codex/validate: wrong event" "unexpected: $OUT"
 fi
 
 echo ""

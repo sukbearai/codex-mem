@@ -160,7 +160,7 @@ Hook 驱动整个循环：
 - **Obsidian 集成指南** — [docs/obsidian.md](docs/obsidian.md)，含 Dataview 查询、Graph View 技巧、推荐配置
 - **预读协议** — 5 个 skill 均以 Step 0 上下文检查开始（读取 `work/Index.md` + `SCHEMA.md`）
 - **新 frontmatter 字段** — `type`（work/decision/source-summary/reference/thinking）、`sources`（源文档路径）、`synthesized_from`（综合引用来源）
-- **Hook 增强** — session-start 注入 SCHEMA 上下文（标签分类法 + 页面阈值）；validate-write 校验标签白名单和 type 字段
+- **Hook 增强** — session-start 注入 SCHEMA 上下文（标签分类法 + 页面阈值）；Claude validate-write 校验标签白名单和 type 字段；Codex validate-write 检测 Bash 命令失败
 - **`/wrap-up` 增强** — 归档时自动迁移反向链接，3+ 笔记 session 后推荐运行 lint
 - **11 条 Pitfalls 防错清单** — 常见反模式（详见 `plugin/instructions.md` 和 `vault/CLAUDE.md`）
 - **5 个模板重构** — 所有模板增加内容结构规范和新 frontmatter 字段

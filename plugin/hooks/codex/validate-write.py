@@ -4,6 +4,10 @@
 Checks Bash command output for hard failures (command not found,
 permission denied, missing paths) and non-zero exit codes with
 informative output. Modeled after oh-my-codex's native PostToolUse.
+
+Codex only supports additionalContext on context-producing events. This
+tool hook returns decision/reason only so it remains valid even as Codex
+strictly validates PreToolUse/PostToolUse output schemas.
 """
 import json
 import re
@@ -48,6 +52,10 @@ def main():
     except (ValueError, EOFError, OSError):
         sys.exit(0)
 
+    hook_event_name = payload.get("hook_event_name") or payload.get("hookEventName")
+    if hook_event_name and hook_event_name != "PostToolUse":
+        sys.exit(0)
+
     tool_name = _safe_string(payload.get("tool_name", "")).strip()
     if tool_name != "Bash":
         sys.exit(0)
@@ -79,14 +87,6 @@ def main():
         output = {
             "decision": "block",
             "reason": "Bash output indicates a command/setup failure that should be fixed before retrying.",
-            "hookSpecificOutput": {
-                "hookEventName": "PostToolUse",
-                "additionalContext": (
-                    "Bash reported `command not found`, `permission denied`, or a missing file/path. "
-                    "Verify the command, dependency installation, PATH, file permissions, "
-                    "and referenced paths before retrying."
-                ),
-            },
         }
         sys.stdout.write(json.dumps(output) + "\n")
         sys.stdout.flush()
@@ -97,13 +97,6 @@ def main():
         output = {
             "decision": "block",
             "reason": "Bash command returned a non-zero exit code but produced useful output that should be reviewed before retrying.",
-            "hookSpecificOutput": {
-                "hookEventName": "PostToolUse",
-                "additionalContext": (
-                    "The Bash output appears informative despite the non-zero exit code. "
-                    "Review and report the output before retrying instead of assuming the command simply failed."
-                ),
-            },
         }
         sys.stdout.write(json.dumps(output) + "\n")
         sys.stdout.flush()

@@ -47,13 +47,20 @@ Session-end detection always stays in suggest mode for safety.
 
 ### 3. validate-write.py
 
-Runs after the agent writes or edits a `.md` file. Checks:
+Runs after tool use, with agent-specific behavior:
+
+- Claude Code: after writing or editing a `.md` file
+- Codex CLI: after running Bash, to catch command/setup failures
+
+For Claude Code note validation, it checks:
 
 - Has YAML frontmatter? (date, description, tags)
 - Has at least one `[[wikilink]]`?
 - Is in the right folder?
 
 If something's missing, the agent gets a warning and fixes it.
+
+For Codex CLI Bash validation, it blocks hard failures such as missing commands, permission errors, missing paths, and non-zero commands with useful output that should be reviewed before retrying.
 
 ## The Vault
 
@@ -92,6 +99,6 @@ The CLI is a thin wrapper around `plugin/install.sh`. It adds version tracking (
 RAG re-derives knowledge from scratch on every query. Codex-Vault compiles knowledge once (into structured notes with links) and keeps it current. The agent reads the compiled wiki, not raw chunks.
 
 Hooks are the key mechanism because they're:
-- **Agent-agnostic** — Claude Code and Codex CLI both support the same hook protocol
+- **Agent-agnostic** — Claude Code and Codex CLI both use lifecycle hooks, with agent-specific event capabilities where needed
 - **Zero infrastructure** — shell scripts, no servers
 - **Transparent** — you can read every hook, modify them, add your own

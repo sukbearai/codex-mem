@@ -217,6 +217,12 @@ def main():
     except (ValueError, EOFError, OSError):
         sys.exit(0)
 
+    hook_event_name = input_data.get("hook_event_name") or input_data.get("hookEventName")
+    if hook_event_name and hook_event_name != "UserPromptSubmit":
+        sys.exit(0)
+    if "tool_name" in input_data:
+        sys.exit(0)
+
     prompt = input_data.get("prompt", "")
     if not isinstance(prompt, str) or not prompt:
         sys.exit(0)

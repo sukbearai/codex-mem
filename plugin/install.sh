@@ -124,8 +124,8 @@ fi
 
 HOOKS_DIR="$VAULT_DIR/.codex-vault/hooks"
 mkdir -p "$HOOKS_DIR/claude" "$HOOKS_DIR/codex"
-cp "$REPO_DIR/plugin/hooks/claude/"* "$HOOKS_DIR/claude/"
-cp "$REPO_DIR/plugin/hooks/codex/"* "$HOOKS_DIR/codex/"
+find "$REPO_DIR/plugin/hooks/claude" -maxdepth 1 -type f -exec cp {} "$HOOKS_DIR/claude/" \;
+find "$REPO_DIR/plugin/hooks/codex" -maxdepth 1 -type f -exec cp {} "$HOOKS_DIR/codex/" \;
 chmod +x "$HOOKS_DIR/claude/"*.py "$HOOKS_DIR/codex/"*.py 2>/dev/null || true
 if [ "$MODE" = "standalone" ]; then
   echo "[+] Hook scripts copied to vault/.codex-vault/hooks/{claude,codex}/"
@@ -229,6 +229,38 @@ else:
 
 if "hooks" not in existing:
     existing["hooks"] = {}
+
+# Remove old Codex-Vault Codex hook entries before inserting the canonical
+# mapping. Older installs may have left these under PreToolUse, where Codex
+# rejects additionalContext from context-producing scripts.
+def is_managed_codex_hook(command):
+    return ".codex-vault/hooks/codex/" in command or "codex-mem/hooks/codex/" in command
+
+for event in list(existing["hooks"].keys()):
+    entries = existing["hooks"].get(event)
+    if not isinstance(entries, list):
+        continue
+    kept_entries = []
+    for rule in entries:
+        if not isinstance(rule, dict):
+            kept_entries.append(rule)
+            continue
+        hooks = rule.get("hooks", [])
+        if not isinstance(hooks, list):
+            kept_entries.append(rule)
+            continue
+        kept_hooks = [
+            h for h in hooks
+            if not (isinstance(h, dict) and is_managed_codex_hook(h.get("command", "")))
+        ]
+        if kept_hooks:
+            new_rule = dict(rule)
+            new_rule["hooks"] = kept_hooks
+            kept_entries.append(new_rule)
+    if kept_entries:
+        existing["hooks"][event] = kept_entries
+    else:
+        del existing["hooks"][event]
 
 for event, entries in new_hooks.items():
     if event not in existing["hooks"]:

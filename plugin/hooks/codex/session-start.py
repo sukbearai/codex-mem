@@ -410,6 +410,12 @@ def main():
     except Exception:
         event = {}
 
+    hook_event_name = event.get("hook_event_name") or event.get("hookEventName")
+    if hook_event_name and hook_event_name != "SessionStart":
+        sys.exit(0)
+    if "tool_name" in event or "prompt" in event:
+        sys.exit(0)
+
     cwd = event.get("cwd", os.getcwd())
     vault_dir = _find_vault_root(cwd)
     if not vault_dir:

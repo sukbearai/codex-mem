@@ -16,13 +16,13 @@ Codex-Vault uses 3 lifecycle events. Map them to your agent's equivalent:
 |-----------|------|--------|--------|
 | SessionStart | Agent starts or resumes | `plugin/hooks/claude/session-start.py` | `plugin/hooks/codex/session-start.py` |
 | UserPromptSubmit | User sends a message | `plugin/hooks/claude/classify-message.py` | `plugin/hooks/codex/classify-message.py` |
-| PostToolUse (Write/Edit) | Agent writes a file | `plugin/hooks/claude/validate-write.py` | *(not supported — Codex only fires PostToolUse for Bash)* |
+| PostToolUse | Validate tool results | Write/Edit note validation via `plugin/hooks/claude/validate-write.py` | Bash failure detection via `plugin/hooks/codex/validate-write.py` |
 
 Each agent has its own hook scripts under `plugin/hooks/{claude,codex}/`. The scripts share the same core logic but differ in output format:
 - **Claude Code**: uses `systemMessage` in JSON for terminal display
 - **Codex CLI**: uses stderr for terminal feedback (Codex TUI doesn't render systemMessage)
 
-All scripts read JSON from stdin and output JSON to stdout via the `hookSpecificOutput` protocol.
+All scripts read JSON from stdin. Context-producing hooks output JSON via the `hookSpecificOutput` protocol. Tool validation hooks should only return the control fields supported by that event.
 
 ### Input (stdin)
 
@@ -30,11 +30,15 @@ All scripts read JSON from stdin and output JSON to stdout via the `hookSpecific
 
 **UserPromptSubmit**: `{ "session_id": "...", "prompt": "user's message" }`
 
-**PostToolUse**: `{ "session_id": "...", "tool_name": "Write", "tool_input": { "file_path": "/path/to/file.md" } }`
+**PostToolUse (Claude Write/Edit)**: `{ "session_id": "...", "tool_name": "Write", "tool_input": { "file_path": "/path/to/file.md" } }`
+
+**PostToolUse (Codex Bash)**: `{ "session_id": "...", "hook_event_name": "PostToolUse", "tool_name": "Bash", "tool_input": { "command": "pytest" }, "tool_response": "{\"exit_code\":1,\"stdout\":\"2 failed\",\"stderr\":\"\"}" }`
+
+Codex also includes `hook_event_name`; Codex scripts ignore payloads for other events so a stale or misregistered hook does not return invalid output.
 
 ### Output (stdout)
 
-All hooks output JSON with the `hookSpecificOutput` protocol:
+SessionStart and UserPromptSubmit hooks output JSON with the `hookSpecificOutput` protocol:
 
 ```json
 {
@@ -46,6 +50,15 @@ All hooks output JSON with the `hookSpecificOutput` protocol:
 ```
 
 Empty stdout or exit code 0 with no output = no hints to inject.
+
+Codex PostToolUse validation returns only event-supported control fields:
+
+```json
+{
+  "decision": "block",
+  "reason": "Bash output indicates a command/setup failure that should be fixed before retrying."
+}
+```
 
 ### Stderr (user feedback)
 
@@ -68,4 +81,5 @@ After setup, verify:
 1. Start the agent in the vault directory
 2. Check that session context is injected (North Star, active work, etc.)
 3. Say "I decided to use PostgreSQL" — check that a DECISION hint appears
-4. Create a note — check that validate-write checks frontmatter
+4. In Claude Code, create a note — check that validate-write checks frontmatter
+5. In Codex CLI, run a failing Bash command — check that validate-write reports a block reason without `additionalContext`
